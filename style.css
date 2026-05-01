@@ -351,8 +351,12 @@ body {
 .nav-bottom {
   display: flex;
   justify-content: space-between;
-  padding-top: 16px;
+  padding: 16px 0;
   border-top: 1px solid var(--border);
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  z-index: 10;
 }
 .nav-btn {
   padding: 10px 24px;
