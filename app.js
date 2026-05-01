@@ -158,7 +158,7 @@ async function runCode() {
   if (isRunning || !pyodide) return;
   isRunning = true;
   btnRun.disabled = true;
-  btnRun.textContent = "⏳ Running…";
+  btnRun.textContent = "Running…";
   outputEl.className = "";
   outputEl.textContent = "";
   outputStatus.textContent = "";
@@ -211,7 +211,7 @@ _capture.getvalue()
   } finally {
     isRunning = false;
     btnRun.disabled = false;
-    btnRun.textContent = "▶ Run";
+    btnRun.textContent = "Run";
   }
 }
 
@@ -230,10 +230,10 @@ function renderLesson(index) {
   editor.setValue(lesson.starterCode);
   outputEl.textContent = "";
   outputEl.className = "";
-  outputEl.innerHTML = '<span class="output-empty">Hit ▶ Run or Ctrl+Enter to execute</span>';
+  outputEl.innerHTML = '<span class="output-empty">Hit Run or Ctrl+Enter to execute</span>';
   outputStatus.textContent = "";
   outputStatus.className = "";
-  editorStatus.textContent = "⌘/Ctrl + Enter to run";
+  editorStatus.textContent = "Ctrl + Enter to run";
 
   exerciseText.innerHTML = renderMarkdown(lesson.exercise);
   hintText.textContent = lesson.hint;
@@ -242,7 +242,7 @@ function renderLesson(index) {
 
   btnPrev.disabled = index === 0;
   btnNext.disabled = index === lessons.length - 1;
-  btnNext.textContent = index === lessons.length - 1 ? "🎉 Complete!" : "Next →";
+  btnNext.textContent = index === lessons.length - 1 ? "Complete!" : "Next \u2192";
 
   updateSidebar();
   $("main").scrollTop = 0;
@@ -300,7 +300,7 @@ btnRun.addEventListener("click", runCode);
 
 btnReset.addEventListener("click", () => {
   editor.setValue(lessons[currentLesson].starterCode);
-  outputEl.innerHTML = '<span class="output-empty">Hit ▶ Run or Ctrl+Enter to execute</span>';
+  outputEl.innerHTML = '<span class="output-empty">Hit Run or Ctrl+Enter to execute</span>';
   outputEl.className = "";
   outputStatus.textContent = "";
 });
@@ -336,39 +336,62 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Boot — landing page first, then load runtime
+// Boot — landing page first, then load runtime on click
 // ---------------------------------------------------------------------------
 
-const landingEl = $("landing");
-const startBtn = $("start-codelab");
+const landingEl = document.getElementById("landing");
+const startBtn = document.getElementById("start-codelab");
+let booted = false;
 
-// Start loading Pyodide immediately in background
-let runtimeReady = false;
-const runtimePromise = (async () => {
-  await Promise.all([initPyodide(), initMonaco()]);
-  runtimeReady = true;
-})().catch((err) => {
-  loadingText.textContent = `Failed to load: ${err.message}`;
-  console.error(err);
-});
-
-startBtn.addEventListener("click", async () => {
-  // Dismiss landing
-  landingEl.classList.add("hidden");
-  setTimeout(() => landingEl.remove(), 500);
-
-  // If runtime isn't ready yet, show loading overlay
-  if (!runtimeReady) {
-    loadingEl.style.display = "flex";
-    await runtimePromise;
+async function launchCodelab(startLesson) {
+  if (booted) {
+    // Already booted, just navigate
+    renderLesson(startLesson);
+    return;
   }
 
-  // Boot the codelab
-  buildSidebar();
-  updateProgress();
-  renderLesson(0);
-  btnRun.disabled = false;
-  loadingEl.classList.add("hidden");
-  setTimeout(() => loadingEl.remove(), 500);
+  // Dismiss landing
+  if (landingEl) {
+    landingEl.style.opacity = "0";
+    landingEl.style.transform = "translateY(-20px)";
+    landingEl.style.pointerEvents = "none";
+    setTimeout(() => { if (landingEl.parentNode) landingEl.parentNode.removeChild(landingEl); }, 600);
+  }
+
+  // Show loading
+  loadingEl.style.display = "flex";
+  loadingEl.style.opacity = "1";
+
+  try {
+    await initPyodide();
+    await initMonaco();
+
+    buildSidebar();
+    updateProgress();
+    renderLesson(startLesson);
+    btnRun.disabled = false;
+    booted = true;
+
+    // Hide loading
+    loadingEl.style.opacity = "0";
+    setTimeout(() => { if (loadingEl.parentNode) loadingEl.parentNode.removeChild(loadingEl); }, 500);
+  } catch (err) {
+    loadingText.textContent = "Failed: " + (err.message || err);
+    console.error("Boot error:", err);
+  }
+}
+
+// "Start learning" button → lesson 0
+if (startBtn) {
+  startBtn.addEventListener("click", () => launchCodelab(0));
+}
+
+// Feature cards → jump to specific lesson
+document.querySelectorAll(".feature-card[data-lesson]").forEach((card) => {
+  card.style.cursor = "pointer";
+  card.addEventListener("click", () => {
+    const idx = parseInt(card.dataset.lesson, 10);
+    launchCodelab(idx);
+  });
 });
 

@@ -697,6 +697,107 @@ Agent.with_skills = _with_skills
 
 
 # ---------------------------------------------------------------------------
+# MCP Integration (mock)
+# ---------------------------------------------------------------------------
+
+class MCPServer:
+    """Mock MCP server connection."""
+    def __init__(self, url_or_config: str):
+        self.source = url_or_config
+        self.connected = True
+        # Simulate discovering tools from the MCP server
+        if "filesystem" in url_or_config.lower() or "mcp_config" in url_or_config:
+            self._tools = [
+                {"name": "read_file", "description": "Read file contents"},
+                {"name": "write_file", "description": "Write content to a file"},
+                {"name": "list_directory", "description": "List directory contents"},
+            ]
+        elif "database" in url_or_config.lower():
+            self._tools = [
+                {"name": "query", "description": "Run a SQL query"},
+                {"name": "insert", "description": "Insert a row"},
+            ]
+        elif "search" in url_or_config.lower():
+            self._tools = [
+                {"name": "web_search", "description": "Search the web"},
+                {"name": "image_search", "description": "Search for images"},
+            ]
+        else:
+            self._tools = [
+                {"name": f"mcp_tool_{i}", "description": f"Tool from {url_or_config}"}
+                for i in range(1, 4)
+            ]
+
+    def get_tools(self):
+        return self._tools
+
+
+def _with_mcp(self, servers):
+    """Connect to MCP servers and import their tools."""
+    self._mcp_servers = []
+    for srv in (servers or []):
+        mcp = MCPServer(srv)
+        self._mcp_servers.append(mcp)
+        # Register discovered MCP tools
+        for tool_info in mcp.get_tools():
+            def _make_fn(name, desc):
+                def fn(**kwargs):
+                    return f"[MCP:{name}] executed with {kwargs}"
+                fn.__name__ = name
+                fn.__doc__ = desc
+                return fn
+            func = _make_fn(tool_info["name"], tool_info["description"])
+            self._tools[tool_info["name"]] = Tool(func=func)
+    return self
+
+Agent.with_mcp = _with_mcp
+
+
+# ---------------------------------------------------------------------------
+# REST API / serve() (mock)
+# ---------------------------------------------------------------------------
+
+class AgentServer:
+    """Mock agent server for codelab."""
+    def __init__(self, agent, host="0.0.0.0", port=8000, **kwargs):
+        self.agent = agent
+        self.host = host
+        self.port = port
+        self.routes = {
+            "GET  /":          "Agent info",
+            "GET  /health":    "Health check",
+            "GET  /tools":     "List tools",
+            "POST /execute":   "Execute tool",
+            "POST /process":   "LLM inference",
+            "WS   /ws":        "WebSocket streaming",
+            "POST /stream":    "SSE streaming",
+            "GET  /dashboard": "Observability UI",
+        }
+
+    def describe(self):
+        """Print route table."""
+        print(f"agentu server: {self.agent.name}")
+        print(f"  http://{self.host}:{self.port}\n")
+        print("Routes:")
+        for route, desc in self.routes.items():
+            print(f"  {route:20s} {desc}")
+        print(f"\nTools: {len(self.agent._tools)}")
+        print(f"Transports: HTTP, WebSocket, SSE")
+
+    def run(self):
+        """In codelab, just prints the config instead of actually starting."""
+        self.describe()
+        print("\n[codelab] Server described (not actually started in browser)")
+
+
+def serve(agent, host="0.0.0.0", port=8000, **kwargs):
+    """Serve an agent as a REST API (mock in codelab)."""
+    server = AgentServer(agent, host=host, port=port, **kwargs)
+    server.run()
+    return server
+
+
+# ---------------------------------------------------------------------------
 # Convenience: make 'from agentu import ...' work in codelab
 # ---------------------------------------------------------------------------
 
@@ -707,5 +808,6 @@ __all__ = [
     "observe", "configure_observe",
     "Memory", "Cache",
     "Skill", "SessionManager", "Session",
+    "MCPServer", "serve", "AgentServer",
 ]
 

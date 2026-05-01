@@ -121,17 +121,17 @@ agent = Agent("bot").with_tools([
 
 # READONLY: always works
 result = await agent.call("search", {"query": "laptops"})
-print(f"✅ search: {result}")
+print(f"[ok] search: {result}")
 
 # WRITE: works but logged
 result = await agent.call("save_file", {"name": "report.txt", "content": "Q2 results..."})
-print(f"✅ save_file: {result}")
+print(f"[ok] save_file: {result}")
 
 # DANGEROUS: blocked!
 try:
     await agent.call("delete_all")
 except PermissionError as e:
-    print(f"🚫 delete_all: {e}")
+    print(f"[blocked] delete_all: {e}")
 `,
     exercise: `**Exercise:** Allow the dangerous tool by adding \`.with_permissions(allow_dangerous=True)\` and run \`delete_all\` successfully.
 
@@ -153,7 +153,7 @@ agent = Agent("bot").with_tools([
 ]).with_permissions(allow_dangerous=True)
 
 result = await agent.call("delete_all")
-print(f"✅ delete_all (allowed): {result}")
+print(f"[ok] delete_all (allowed): {result}")
 `,
   },
 
@@ -214,7 +214,7 @@ print("=== High-priority meetings ===")
 all_memories = agent.recall()
 important = [m for m in all_memories if m["importance"] > 0.7]
 for m in important:
-    print(f"  ⭐ [{m['importance']}] {m['content']}")
+    print(f"  * [{m['importance']}] {m['content']}")
 
 print(f"\\n{len(important)} high-priority out of {len(all_memories)} total")
 `,
@@ -1036,5 +1036,194 @@ for e in agent.observer.events:
     print(f"  {e['type']}: {dict((k,v) for k,v in e.items() if k not in ('type','timestamp'))}")
 `,
   },
-];
 
+  // -----------------------------------------------------------------------
+  // Lesson 13: MCP Integration
+  // -----------------------------------------------------------------------
+  {
+    id: "mcp",
+    title: "MCP integration",
+    description: `
+**Model Context Protocol (MCP)** lets agents discover and use tools from external servers.
+
+Instead of defining tools in code, you connect to MCP servers that expose them dynamically:
+
+\`\`\`python
+agent = Agent("bot").with_mcp([
+    "~/.agentu/mcp_config.json",
+    "http://localhost:3000",
+])
+\`\`\`
+
+MCP servers can provide filesystem access, database queries, web search, and any custom tool set. The agent auto-discovers available tools at connection time.
+
+MCP config file format:
+\`\`\`python
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    }
+  }
+}
+\`\`\`
+    `.trim(),
+    starterCode: `from agentu import Agent, Tool, SessionManager
+
+# Connect agent to MCP servers
+agent = Agent("file-assistant").with_mcp([
+    "~/.agentu/mcp_config.json",   # filesystem MCP server
+]).with_mock_responses([
+    "I found 3 files in the directory.",
+    "File contents: Hello World",
+    "File written successfully.",
+])
+
+# See what tools were discovered
+print("=== Discovered MCP tools ===")
+for tool in agent.list_tools():
+    print(f"  {tool['name']}: {tool['description']}")
+
+# Call MCP tools directly
+print("\\n=== Direct tool calls ===")
+result = await agent.call("list_directory", {"path": "/tmp"})
+print(f"list_directory: {result}")
+
+result = await agent.call("read_file", {"path": "/tmp/notes.txt"})
+print(f"read_file: {result}")
+
+result = await agent.call("write_file", {"path": "/tmp/out.txt", "content": "hello"})
+print(f"write_file: {result}")
+
+# Use with sessions for stateful MCP interactions
+print("\\n=== Stateful MCP session ===")
+manager = SessionManager()
+session = manager.create_session(agent, metadata={"user": "demo"})
+
+r1 = await session.send("List files in /tmp")
+print(f"Turn 1: {r1['result']}")
+
+r2 = await session.send("Read the first file")
+print(f"Turn 2: {r2['result']}")
+
+r3 = await session.send("Write a summary to output.txt")
+print(f"Turn 3: {r3['result']}")
+
+print(f"\\nSession turns: {session.turn_count}")
+print(f"Total tools available: {len(agent.list_tools())}")
+`,
+    exercise: `**Exercise:** Connect to two MCP servers (a "database" server and a "search" server). List all discovered tools from both, then call one tool from each server.`,
+    hint: "Use `.with_mcp(['database-server', 'search-server'])`. The mock auto-generates tools based on the server name containing 'database' or 'search'.",
+    solution: `from agentu import Agent
+
+agent = Agent("multi-mcp").with_mcp([
+    "database-server",
+    "search-server",
+])
+
+print("Discovered tools from 2 MCP servers:")
+for tool in agent.list_tools():
+    print(f"  {tool['name']}: {tool['description']}")
+
+print(f"\\nTotal: {len(agent.list_tools())} tools\\n")
+
+# Call one from each server
+r1 = await agent.call("query", {"sql": "SELECT * FROM users"})
+print(f"Database: {r1}")
+
+r2 = await agent.call("web_search", {"query": "agentu framework"})
+print(f"Search: {r2}")
+`,
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 14: REST API
+  // -----------------------------------------------------------------------
+  {
+    id: "serve",
+    title: "REST API",
+    description: `
+\`serve()\` turns any agent into a production REST API with three transports:
+
+- **HTTP** \u2014 \`POST /process\` (inference), \`POST /execute\` (tool call)
+- **WebSocket** \u2014 \`/ws\` (bidirectional streaming with sessions)
+- **SSE** \u2014 \`POST /stream\` (server-sent events)
+
+Plus built-in endpoints for memory, health checks, and an observability dashboard.
+
+\`\`\`python
+from agentu import Agent, serve
+agent = Agent("bot").with_tools([...])
+serve(agent, port=8000)
+\`\`\`
+
+In production, the server runs on Uvicorn + FastAPI. In this codelab, we mock the server to show the route table and configuration.
+    `.trim(),
+    starterCode: `from agentu import Agent, Tool, serve
+
+def search(query: str) -> str:
+    """Search the knowledge base."""
+    return f"Results for '{query}': doc_1, doc_2"
+
+def create_ticket(title: str, priority: str) -> dict:
+    """Create a support ticket."""
+    return {"id": "TKT-001", "title": title, "priority": priority}
+
+# Build a full-featured agent
+agent = Agent("support-api") \\
+    .with_tools([Tool(search), Tool(create_ticket)]) \\
+    .with_cache(preset="basic") \\
+    .with_rules("AGENTS.md")
+
+# Serve it as a REST API
+print("=== Starting agent server ===\\n")
+server = serve(agent, host="0.0.0.0", port=8000)
+
+# In production, clients would call these endpoints:
+print("\\n=== Example client requests ===")
+print("""
+# HTTP: Execute a tool
+curl -X POST localhost:8000/execute \\\\
+  -H 'Content-Type: application/json' \\\\
+  -d '{"tool_name": "search", "parameters": {"query": "billing"}}'
+
+# HTTP: LLM inference
+curl -X POST localhost:8000/process \\\\
+  -d '{"input": "help me with billing"}'
+
+# WebSocket: Streaming
+wscat -c ws://localhost:8000/ws
+> {"input": "search for billing docs"}
+
+# SSE: Server-sent events
+curl -N -X POST localhost:8000/stream \\\\
+  -d '{"input": "summarize the results"}'
+""")
+`,
+    exercise: `**Exercise:** Build an agent with 3 tools, connect an MCP server, and serve it. Print the full route table and count total tools (local + MCP).`,
+    hint: "Chain `.with_tools([...]).with_mcp([...])` then call `serve()`. The route table is printed automatically.",
+    solution: `from agentu import Agent, Tool, serve
+
+def add(x: int, y: int) -> int:
+    return x + y
+
+def subtract(x: int, y: int) -> int:
+    return x - y
+
+def multiply(x: int, y: int) -> int:
+    return x * y
+
+agent = Agent("calc-api") \\
+    .with_tools([Tool(add), Tool(subtract), Tool(multiply)]) \\
+    .with_mcp(["filesystem-server"]) \\
+    .with_cache()
+
+print(f"Local tools: 3")
+print(f"MCP tools: {len(agent.list_tools()) - 3}")
+print(f"Total tools: {len(agent.list_tools())}\\n")
+
+serve(agent, port=9000)
+`,
+  },
+];

@@ -19,77 +19,31 @@
       <p class="landing-subtitle">Master the AI agent runtime — tools, sandboxing, workflows, guardrails, and more. Write and run real Python code directly in your browser.</p>
 
       <div class="feature-grid">
-        <div class="feature-card">
-          <div class="feature-icon">⚡</div>
-          <h3>Agent + Tools</h3>
-          <p>Create agents, attach tools, execute them with type-safe schemas.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔒</div>
-          <h3>Sandbox & Permissions</h3>
-          <p>READONLY / WRITE / DANGEROUS — least-privilege by default.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🧠</div>
-          <h3>Memory</h3>
-          <p>SQLite-backed remember/recall with importance-weighted search.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">💾</div>
-          <h3>Caching</h3>
-          <p>SHA-256 exact match, semantic, offline, and distributed presets.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🛡️</div>
-          <h3>Guardrails</h3>
-          <p>NoPII, NoHallucination — auto-retry with self-correction loops.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔀</div>
-          <h3>Workflows</h3>
-          <p>Sequential (>>), parallel (&), fan-out/fan-in with lambdas.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <h3>Evaluation</h3>
-          <p>Test suites, validators, accuracy metrics, LLM-as-judge.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📡</div>
-          <h3>Observability</h3>
-          <p>Auto-tracked events, metrics, and full execution traces.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">💬</div>
-          <h3>Sessions</h3>
-          <p>Multi-turn stateful conversations with isolated user contexts.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🧩</div>
-          <h3>Skills & Rules</h3>
-          <p>Progressive-load domain expertise. 3-level context optimization.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🤖</div>
-          <h3>LLM Inference</h3>
-          <p>Route queries through Ollama, OpenAI, or Anthropic models.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🌐</div>
-          <h3>In-Browser Python</h3>
-          <p>Powered by Pyodide — no install, no setup, just code.</p>
-        </div>
+        <div class="feature-card" data-lesson="0"><h3>Agent + Tools</h3><p>Create agents, attach tools, execute with type-safe schemas.</p></div>
+        <div class="feature-card" data-lesson="1"><h3>Permissions</h3><p>READONLY / WRITE / DANGEROUS access control for tools.</p></div>
+        <div class="feature-card" data-lesson="2"><h3>Memory</h3><p>SQLite-backed remember/recall with importance-weighted search.</p></div>
+        <div class="feature-card" data-lesson="3"><h3>Caching</h3><p>SHA-256 exact match, semantic, offline, and distributed presets.</p></div>
+        <div class="feature-card" data-lesson="4"><h3>Guardrails</h3><p>NoPII, NoHallucination with automatic self-correction.</p></div>
+        <div class="feature-card" data-lesson="5"><h3>Workflows</h3><p>Sequential, parallel, fan-out/fan-in with operator chaining.</p></div>
+        <div class="feature-card" data-lesson="6"><h3>Evaluation</h3><p>Test suites, validators, accuracy metrics, LLM-as-judge.</p></div>
+        <div class="feature-card" data-lesson="7"><h3>Observability</h3><p>Auto-tracked events, metrics, and full execution traces.</p></div>
+        <div class="feature-card" data-lesson="8"><h3>Sandbox</h3><p>Separate read/write tool buckets with least-privilege defaults.</p></div>
+        <div class="feature-card" data-lesson="9"><h3>Sessions</h3><p>Multi-turn stateful conversations with isolated contexts.</p></div>
+        <div class="feature-card" data-lesson="10"><h3>Skills</h3><p>Progressive-load domain expertise. 3-level context optimization.</p></div>
+        <div class="feature-card" data-lesson="11"><h3>LLM Inference</h3><p>Route queries through Ollama, OpenAI, or Anthropic.</p></div>
+        <div class="feature-card" data-lesson="12"><h3>MCP</h3><p>Discover and use tools from external Model Context Protocol servers.</p></div>
+        <div class="feature-card" data-lesson="13"><h3>REST API</h3><p>Serve agents via HTTP, WebSocket, and SSE with one call.</p></div>
       </div>
 
       <div class="landing-cta-row">
-        <button class="landing-cta" id="start-codelab">Start learning →</button>
-        <span class="landing-meta">12 lessons · ~45 min · zero setup</span>
+        <button class="landing-cta" id="start-codelab">Start learning</button>
+        <span class="landing-meta">14 lessons &middot; ~60 min &middot; zero setup</span>
       </div>
     </div>
   </div>
 
-  <!-- Loading overlay -->
-  <div class="loading-overlay" id="loading">
+  <!-- Loading overlay (starts hidden, shown by JS when needed) -->
+  <div class="loading-overlay" id="loading" style="display:none">
     <div class="loading-spinner"></div>
     <div class="loading-text" id="loading-text">Loading Python runtime…</div>
   </div>
@@ -98,7 +52,7 @@
   <header class="topbar">
     <h1>agentu codelab</h1>
     <div class="progress-wrap">
-      <span id="progress-label">0/8 complete</span>
+      <span id="progress-label">0/14 complete</span>
       <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
       <span class="progress-pct" id="progress-pct">0%</span>
     </div>
@@ -130,7 +84,7 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn btn-run" id="btn-run" disabled>▶ Run</button>
+        <button class="btn btn-run" id="btn-run" disabled>Run</button>
         <button class="btn btn-reset" id="btn-reset">Reset</button>
         <button class="btn btn-solution" id="btn-solution">Show solution</button>
       </div>
@@ -146,7 +100,7 @@
 
       <!-- Exercise -->
       <div class="exercise" id="exercise-wrap">
-        <h3>📝 Exercise</h3>
+        <h3>Exercise</h3>
         <p id="exercise-text"></p>
         <button class="hint-toggle" id="hint-toggle">Show hint</button>
         <div class="hint-text" id="hint-text"></div>
