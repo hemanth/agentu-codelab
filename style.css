@@ -394,13 +394,14 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 3vh 4vw 2.5vh;
+  justify-content: center;
+  align-items: center;
+  padding: 3vh 4vw;
   box-sizing: border-box;
+  gap: 2.5vh;
 }
 .landing-header {
   text-align: center;
-  flex: 0 0 auto;
 }
 .landing-badge {
   display: inline-block;
@@ -413,13 +414,13 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   border: 1px solid rgba(45, 212, 191, 0.2);
-  margin-bottom: 1.2vh;
+  margin-bottom: 1vh;
 }
 .landing-title {
   font-size: clamp(1.6rem, 3vw, 2.4rem);
   font-weight: 800;
   line-height: 1.1;
-  margin-bottom: 0.6vh;
+  margin-bottom: 0.5vh;
   color: var(--text);
 }
 .gradient-text {
@@ -436,28 +437,21 @@ body {
   line-height: 1.45;
 }
 
-/* --- Feature grid: viewport-locked, never scrolls --- */
+/* --- Feature grid: auto-height, centered --- */
 .feature-grid {
-  flex: 1 1 0;
-  min-height: 0;
+  width: 100%;
+  max-width: 1200px;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: 1fr 1fr;
-  gap: clamp(6px, 0.8vw, 14px);
-  padding: 2vh 0;
-  align-content: stretch;
+  gap: clamp(8px, 0.8vw, 14px);
 }
 .feature-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: clamp(10px, 1.4vw, 22px);
+  padding: clamp(12px, 1.2vw, 20px);
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
 }
 .feature-card:hover {
   border-color: var(--accent);
@@ -465,20 +459,16 @@ body {
   box-shadow: 0 6px 20px rgba(45, 212, 191, 0.1);
 }
 .feature-card h3 {
-  font-size: clamp(0.72rem, 0.9vw, 0.95rem);
+  font-size: clamp(0.72rem, 0.85vw, 0.9rem);
   font-weight: 700;
   color: var(--text);
   margin-bottom: 4px;
   white-space: nowrap;
 }
 .feature-card p {
-  font-size: clamp(0.65rem, 0.75vw, 0.82rem);
+  font-size: clamp(0.65rem, 0.72vw, 0.8rem);
   color: var(--text-muted);
   line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* --- CTA --- */
