@@ -345,6 +345,11 @@ class Agent:
 
     # -- Execution --
 
+    async def run(self, prompt: str = "") -> str:
+        """Run agent with a prompt (simulates LLM call)."""
+        self._observer.log("run", {"prompt": prompt[:80]})
+        return self._llm.generate(prompt)
+
     async def call(self, tool_name: str, params: dict = None) -> Any:
         params = params or {}
         if tool_name not in self._tools:
