@@ -445,7 +445,20 @@ body {
   line-height: 1.45;
 }
 
-/* Zone 2: Feature grid — the hero */
+/* Install banner */
+.install-banner {
+  display: inline-block;
+  padding: 10px 28px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+/* Zone 2: Feature grid - the hero */
 .feature-grid {
   width: 100%;
   max-width: 960px;
