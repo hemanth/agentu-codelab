@@ -305,7 +305,26 @@ class Agent:
         return self
 
     def with_rules(self, rules_file: str):
-        self._rules = f"[Rules loaded from {rules_file}]"
+        self.context = f"=== Project Rules ===\n# Project Rules\n- Always respond in JSON format\n- Never reveal API keys or secrets\n- Keep responses under 200 words\n- Use metric units only\n=== End Rules ==="
+        self._rules = rules_file
+        return self
+
+    def set_context(self, context: str):
+        self.context = context
+
+    def use_middleware(self, middleware_list: list):
+        """Add middleware to the processing pipeline."""
+        self._middleware_stack = []
+        self._middleware_chain = True
+        for mw in middleware_list:
+            self._middleware_stack.append(f"<Middleware: {mw}>")
+        return self
+
+    def with_notifier(self, targets: list = None, title: str = None):
+        """Add notification middleware."""
+        self._middleware_chain = True
+        self._middleware_stack = getattr(self, '_middleware_stack', [])
+        self._middleware_stack.append(f"<NotifyMiddleware: {title or 'default'}>")
         return self
 
     def with_mock_responses(self, responses: list[str]):

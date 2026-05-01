@@ -1258,4 +1258,152 @@ print(f"Total tools: {len(agent.list_tools())}\\n")
 serve(agent, port=9000)
 `,
   },
+
+  // -----------------------------------------------------------------------
+  // Lesson 15: Rules (AGENTS.md)
+  // -----------------------------------------------------------------------
+  {
+    id: "rules",
+    title: "Rules",
+    description: `
+**Feedforward rules** let you control agent behavior by writing constraints in a plain markdown file.
+
+\`\`\`python
+agent = Agent("bot").with_rules("AGENTS.md")
+\`\`\`
+
+The contents of \`AGENTS.md\` are prepended to the system context on every LLM call. This gives you a single source of truth for behavioral guidelines without changing code.
+
+Convention: place an \`AGENTS.md\` at your project root.
+
+Example rules file:
+\`\`\`markdown
+# Project Rules
+- Always respond in JSON format
+- Never reveal API keys or secrets
+- Keep responses under 200 words
+- Use metric units only
+\`\`\`
+    `.trim(),
+    starterCode: `from agentu import Agent
+
+# Load rules from a markdown file
+agent = Agent("strict-bot").with_rules("AGENTS.md")
+
+# The rules are now part of the agent's context
+print("=== Agent context (with rules) ===")
+print(agent.context)
+print()
+
+# Rules persist across all calls
+print("=== Rules affect every response ===")
+result = await agent.run("What is 2+2?")
+print(f"Response: {result}")
+
+# You can also set context manually
+agent2 = Agent("manual-bot")
+agent2.set_context("You are a pirate. Always respond in pirate speak.")
+print(f"\\nManual context: {agent2.context}")
+
+# Combine rules with other features
+agent3 = Agent("full-bot") \\
+    .with_rules("AGENTS.md") \\
+    .with_cache(preset="basic") \\
+    .with_guardrails(output_guardrails=[])
+
+print(f"\\nFull agent context length: {len(agent3.context)} chars")
+`,
+    exercise: `**Exercise:** Create an agent with rules that enforce JSON-only output, then verify the rules appear in the agent's context.`,
+    hint: "Use `.with_rules('AGENTS.md')` and then inspect `agent.context` to confirm the rules are loaded.",
+    solution: `from agentu import Agent
+
+agent = Agent("json-bot").with_rules("AGENTS.md")
+
+# Verify rules are loaded
+print("Rules loaded:", "Project Rules" in agent.context)
+print("Context preview:", agent.context[:200])
+`,
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 16: Middleware
+  // -----------------------------------------------------------------------
+  {
+    id: "middleware",
+    title: "Middleware",
+    description: `
+**Middleware** wraps the agent's LLM call pipeline with \`before\` and \`after\` hooks.
+
+\`\`\`python
+agent = Agent("bot").use(
+    CostTracker(),
+    LoggerMiddleware(),
+    RetryMiddleware(max_retries=3),
+)
+\`\`\`
+
+Middleware runs in order for \`before\` hooks and reverse order for \`after\` hooks (like Express.js).
+
+Built-in middleware:
+- **CostTracker** \u2014 estimates token costs per call
+- **LoggerMiddleware** \u2014 logs prompts and responses
+- **RetryMiddleware** \u2014 auto-retries on transient failures
+- **NotifyMiddleware** \u2014 sends notifications via Apprise
+
+You can also write custom middleware by extending \`BaseMiddleware\`.
+    `.trim(),
+    starterCode: `from agentu import Agent
+
+# Stack multiple middleware
+agent = Agent("monitored-bot").use_middleware([
+    "cost_tracker",
+    "logger",
+    "retry:max_retries=3",
+])
+
+print("=== Middleware pipeline ===")
+for i, mw in enumerate(agent._middleware_stack):
+    print(f"  {i+1}. {mw}")
+
+# Run a call through the pipeline
+print("\\n=== Running through middleware ===")
+result = await agent.run("Hello, middleware!")
+print(f"Result: {result}")
+
+# Notifications shorthand
+agent2 = Agent("notifier") \\
+    .with_notifier(
+        targets=["slack://hook.slack.com/xxx"],
+        title="Agent Alert"
+    )
+
+print(f"\\nNotifier configured: {hasattr(agent2, '_middleware_chain')}")
+
+# Combine everything
+full_agent = Agent("production") \\
+    .with_rules("AGENTS.md") \\
+    .with_cache(preset="smart") \\
+    .with_guardrails(output_guardrails=[]) \\
+    .use_middleware(["cost_tracker", "logger"])
+
+print(f"\\nProduction agent ready")
+print(f"  Cache: {full_agent.cache_enabled}")
+print(f"  Rules: {'Project Rules' in full_agent.context}")
+print(f"  Middleware: {len(full_agent._middleware_stack)} layers")
+`,
+    exercise: `**Exercise:** Create an agent with cost tracking and retry middleware, then run a call and print the middleware stack.`,
+    hint: "Use `.use_middleware(['cost_tracker', 'retry:max_retries=2'])` and inspect `agent._middleware_stack`.",
+    solution: `from agentu import Agent
+
+agent = Agent("resilient") \\
+    .use_middleware(["cost_tracker", "retry:max_retries=2"])
+
+print("Middleware stack:")
+for mw in agent._middleware_stack:
+    print(f"  - {mw}")
+
+result = await agent.run("Test call")
+print(f"\\nResult: {result}")
+`,
+  },
 ];

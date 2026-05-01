@@ -442,7 +442,7 @@ body {
   width: 100%;
   max-width: 1200px;
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: clamp(8px, 0.8vw, 14px);
 }
 .feature-card {
