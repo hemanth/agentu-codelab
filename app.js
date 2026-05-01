@@ -241,8 +241,8 @@ function renderLesson(index) {
   hintToggle.textContent = "Show hint";
 
   btnPrev.disabled = index === 0;
-  btnNext.disabled = index === lessons.length - 1;
-  btnNext.textContent = index === lessons.length - 1 ? "Complete!" : "Next \u2192";
+  btnNext.disabled = false;
+  btnNext.textContent = index === lessons.length - 1 ? "Complete" : "Next \u2192";
 
   updateSidebar();
   $("main").scrollTop = 0;
@@ -326,7 +326,18 @@ btnPrev.addEventListener("click", () => {
 });
 
 btnNext.addEventListener("click", () => {
-  if (currentLesson < lessons.length - 1) renderLesson(currentLesson + 1);
+  if (currentLesson < lessons.length - 1) {
+    renderLesson(currentLesson + 1);
+  } else {
+    // Last lesson — mark complete and celebrate
+    if (!completed.includes(currentLesson)) {
+      completed.push(currentLesson);
+      localStorage.setItem("agentu-codelab-completed", JSON.stringify(completed));
+      updateSidebar();
+    }
+    btnNext.textContent = "All done";
+    btnNext.disabled = true;
+  }
 });
 
 document.addEventListener("keydown", (e) => {
