@@ -348,7 +348,8 @@ class Agent:
     async def run(self, prompt: str = "") -> str:
         """Run agent with a prompt (simulates LLM call)."""
         self._observer.log("run", {"prompt": prompt[:80]})
-        return self._llm.generate(prompt)
+        result = await self._llm.complete([{"role": "user", "content": prompt}])
+        return result
 
     async def call(self, tool_name: str, params: dict = None) -> Any:
         params = params or {}
