@@ -17,7 +17,8 @@ let isRunning = false;
 const $ = (id) => document.getElementById(id);
 const loadingEl = $("loading");
 const loadingText = $("loading-text");
-const sidebarEl = $("sidebar");
+const sidebarEl = $("sidebar-lessons");
+const searchInput = $("search-input");
 const lessonNum = $("lesson-num");
 const lessonTitle = $("lesson-title");
 const lessonDesc = $("lesson-desc");
@@ -36,6 +37,45 @@ const btnPrev = $("btn-prev");
 const btnNext = $("btn-next");
 
 // ---------------------------------------------------------------------------
+// Simple markdown → HTML
+// ---------------------------------------------------------------------------
+
+function renderMarkdown(text) {
+  let html = text
+    // Code blocks (```...```)
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
+    })
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Unordered lists
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    // Wrap consecutive <li> in <ul>
+    .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+
+  // Paragraphs: split by double newline
+  html = html
+    .split(/\n\n+/)
+    .map(block => {
+      block = block.trim();
+      if (!block) return "";
+      if (block.startsWith("<pre>") || block.startsWith("<ul>")) return block;
+      return `<p>${block.replace(/\n/g, "<br>")}</p>`;
+    })
+    .join("\n");
+
+  return html;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ---------------------------------------------------------------------------
 // Pyodide init
 // ---------------------------------------------------------------------------
 
@@ -43,18 +83,17 @@ async function initPyodide() {
   loadingText.textContent = "Loading Python runtime…";
   pyodide = await loadPyodide();
 
+  loadingText.textContent = "Loading Python packages…";
+  await pyodide.loadPackage("sqlite3");
+
   loadingText.textContent = "Loading agentu module…";
 
-  // Fetch the mock module
   const mockResp = await fetch("./agentu_mock.py");
   const mockCode = await mockResp.text();
 
-  // Register it as 'agentu' so `from agentu import ...` works
   pyodide.FS.writeFile("/home/pyodide/agentu.py", mockCode);
   pyodide.runPython(`import sys; sys.path.insert(0, '/home/pyodide')`);
-
-  // Verify
-  pyodide.runPython(`import agentu; print("agentu loaded")`);
+  pyodide.runPython(`import agentu`);
 
   loadingText.textContent = "Loading editor…";
 }
@@ -74,19 +113,19 @@ function initMonaco() {
         inherit: true,
         rules: [
           { token: "comment", foreground: "6b7280", fontStyle: "italic" },
-          { token: "keyword", foreground: "c084fc" },
+          { token: "keyword", foreground: "2dd4bf" },
           { token: "string", foreground: "34d399" },
           { token: "number", foreground: "fbbf24" },
-          { token: "type", foreground: "818cf8" },
+          { token: "type", foreground: "67e8f9" },
         ],
         colors: {
           "editor.background": "#0f172a",
           "editor.foreground": "#e2e8f0",
           "editor.lineHighlightBackground": "#1e293b",
-          "editorCursor.foreground": "#818cf8",
+          "editorCursor.foreground": "#2dd4bf",
           "editor.selectionBackground": "#334155",
           "editorLineNumber.foreground": "#475569",
-          "editorLineNumber.activeForeground": "#818cf8",
+          "editorLineNumber.activeForeground": "#2dd4bf",
         },
       });
 
@@ -105,16 +144,14 @@ function initMonaco() {
         wordWrap: "on",
       });
 
-      // Ctrl/Cmd+Enter to run
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
-
       resolve();
     });
   });
 }
 
 // ---------------------------------------------------------------------------
-// Run Python code
+// Run Python code — fixed for Pyodide async
 // ---------------------------------------------------------------------------
 
 async function runCode() {
@@ -128,29 +165,31 @@ async function runCode() {
 
   const code = editor.getValue();
 
-  // Wrap in async since agentu uses `await`
+  // Pyodide handles top-level await natively with runPythonAsync.
+  // We redirect stdout to capture print() output.
   const wrappedCode = `
-import sys, io
-_stdout = io.StringIO()
-sys.stdout = _stdout
+import sys as _sys, io as _io
+_capture = _io.StringIO()
+_sys.stdout = _capture
 
-async def _codelab_main():
+async def _codelab_run():
 ${code.split("\n").map((l) => "    " + l).join("\n")}
 
-import asyncio
-asyncio.get_event_loop().run_until_complete(_codelab_main())
+await _codelab_run()
 
-sys.stdout = sys.__stdout__
-_stdout.getvalue()
+_sys.stdout = _sys.__stdout__
+_capture.getvalue()
 `;
 
   try {
     const result = await pyodide.runPythonAsync(wrappedCode);
-    outputEl.textContent = result || "(no output)";
+    const output = result || "(no output)";
+    outputEl.textContent = output;
     outputStatus.textContent = "✓ success";
+    outputStatus.className = "output-status-ok";
     outputEl.className = "";
 
-    // Mark lesson as completed
+    // Mark completed
     if (!completed.includes(currentLesson)) {
       completed.push(currentLesson);
       localStorage.setItem("agentu-codelab-completed", JSON.stringify(completed));
@@ -158,14 +197,17 @@ _stdout.getvalue()
       updateProgress();
     }
   } catch (err) {
-    // Clean up the error message
     let msg = err.message || String(err);
-    // Extract just the last meaningful error line
+    // Extract the actual Python error (last line that looks like an error)
     const lines = msg.split("\n");
-    const pyError = lines.filter((l) => l.trim() && !l.startsWith("  ") && !l.includes("_codelab_main")).pop() || msg;
+    const meaningful = lines.filter(
+      (l) => l.trim() && !l.startsWith("    ") && !l.includes("_codelab_run")
+    );
+    const pyError = meaningful.pop() || msg;
     outputEl.textContent = pyError;
     outputEl.className = "has-error";
     outputStatus.textContent = "✗ error";
+    outputStatus.className = "output-status-err";
   } finally {
     isRunning = false;
     btnRun.disabled = false;
@@ -183,19 +225,17 @@ function renderLesson(index) {
 
   lessonNum.textContent = `Lesson ${index + 1} of ${lessons.length}`;
   lessonTitle.textContent = lesson.title;
-  lessonDesc.textContent = lesson.description;
+  lessonDesc.innerHTML = renderMarkdown(lesson.description);
 
   editor.setValue(lesson.starterCode);
   outputEl.textContent = "";
   outputEl.className = "";
-  outputEl.innerHTML = '<span class="output-empty">Run your code to see output here</span>';
+  outputEl.innerHTML = '<span class="output-empty">Hit ▶ Run or Ctrl+Enter to execute</span>';
   outputStatus.textContent = "";
-  editorStatus.textContent = "Ctrl+Enter to run";
+  outputStatus.className = "";
+  editorStatus.textContent = "⌘/Ctrl + Enter to run";
 
-  exerciseText.innerHTML = lesson.exercise.replace(
-    /\*\*(.*?)\*\*/g, "<strong>$1</strong>"
-  ).replace(/\*(.*?)\*/g, "<em>$1</em>").replace(/`(.*?)`/g, "<code>$1</code>");
-
+  exerciseText.innerHTML = renderMarkdown(lesson.exercise);
   hintText.textContent = lesson.hint;
   hintText.classList.remove("show");
   hintToggle.textContent = "Show hint";
@@ -205,13 +245,11 @@ function renderLesson(index) {
   btnNext.textContent = index === lessons.length - 1 ? "🎉 Complete!" : "Next →";
 
   updateSidebar();
-
-  // Scroll to top
   $("main").scrollTop = 0;
 }
 
 // ---------------------------------------------------------------------------
-// Sidebar
+// Sidebar + search
 // ---------------------------------------------------------------------------
 
 function buildSidebar() {
@@ -220,7 +258,7 @@ function buildSidebar() {
     const item = document.createElement("div");
     item.className = "sidebar-item";
     item.dataset.index = i;
-    item.innerHTML = `<span class="dot"></span><span>${lesson.title}</span>`;
+    item.innerHTML = `<span class="dot"></span><span class="sidebar-num">${i + 1}.</span><span>${lesson.title}</span>`;
     item.addEventListener("click", () => renderLesson(i));
     sidebarEl.appendChild(item);
   });
@@ -235,10 +273,24 @@ function updateSidebar() {
 }
 
 function updateProgress() {
-  const pct = (completed.length / lessons.length) * 100;
+  const pct = Math.round((completed.length / lessons.length) * 100);
   progressFill.style.width = `${pct}%`;
-  progressLabel.textContent = `${completed.length} / ${lessons.length}`;
+  progressLabel.textContent = `${completed.length}/${lessons.length} complete`;
+  $("progress-pct").textContent = `${pct}%`;
 }
+
+// Search filter
+searchInput.addEventListener("input", () => {
+  const q = searchInput.value.toLowerCase();
+  document.querySelectorAll(".sidebar-item").forEach((item, i) => {
+    const lesson = lessons[i];
+    const match =
+      !q ||
+      lesson.title.toLowerCase().includes(q) ||
+      lesson.description.toLowerCase().includes(q);
+    item.classList.toggle("hidden", !match);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Event listeners
@@ -248,7 +300,7 @@ btnRun.addEventListener("click", runCode);
 
 btnReset.addEventListener("click", () => {
   editor.setValue(lessons[currentLesson].starterCode);
-  outputEl.innerHTML = '<span class="output-empty">Run your code to see output here</span>';
+  outputEl.innerHTML = '<span class="output-empty">Hit ▶ Run or Ctrl+Enter to execute</span>';
   outputEl.className = "";
   outputStatus.textContent = "";
 });
@@ -277,30 +329,46 @@ btnNext.addEventListener("click", () => {
   if (currentLesson < lessons.length - 1) renderLesson(currentLesson + 1);
 });
 
-// Keyboard navigation
 document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === "TEXTAREA" || e.target.closest("#editor-container")) return;
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.closest("#editor-container")) return;
   if (e.key === "ArrowLeft" && currentLesson > 0) renderLesson(currentLesson - 1);
   if (e.key === "ArrowRight" && currentLesson < lessons.length - 1) renderLesson(currentLesson + 1);
 });
 
 // ---------------------------------------------------------------------------
-// Boot
+// Boot — landing page first, then load runtime
 // ---------------------------------------------------------------------------
 
-async function boot() {
-  try {
-    await Promise.all([initPyodide(), initMonaco()]);
-    buildSidebar();
-    updateProgress();
-    renderLesson(0);
-    btnRun.disabled = false;
-    loadingEl.classList.add("hidden");
-    setTimeout(() => loadingEl.remove(), 500);
-  } catch (err) {
-    loadingText.textContent = `Failed to load: ${err.message}`;
-    console.error(err);
-  }
-}
+const landingEl = $("landing");
+const startBtn = $("start-codelab");
 
-boot();
+// Start loading Pyodide immediately in background
+let runtimeReady = false;
+const runtimePromise = (async () => {
+  await Promise.all([initPyodide(), initMonaco()]);
+  runtimeReady = true;
+})().catch((err) => {
+  loadingText.textContent = `Failed to load: ${err.message}`;
+  console.error(err);
+});
+
+startBtn.addEventListener("click", async () => {
+  // Dismiss landing
+  landingEl.classList.add("hidden");
+  setTimeout(() => landingEl.remove(), 500);
+
+  // If runtime isn't ready yet, show loading overlay
+  if (!runtimeReady) {
+    loadingEl.style.display = "flex";
+    await runtimePromise;
+  }
+
+  // Boot the codelab
+  buildSidebar();
+  updateProgress();
+  renderLesson(0);
+  btnRun.disabled = false;
+  loadingEl.classList.add("hidden");
+  setTimeout(() => loadingEl.remove(), 500);
+});
+

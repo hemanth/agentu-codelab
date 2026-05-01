@@ -635,4 +635,406 @@ for etype, count in counts.most_common():
 print(f"\\nMetrics: {agent.observer.get_metrics()}")
 `,
   },
+
+  // -----------------------------------------------------------------------
+  // Lesson 9: Sandbox
+  // -----------------------------------------------------------------------
+  {
+    id: "sandbox",
+    title: "Sandbox execution",
+    description: `
+\`with_sandbox()\` separates tools into **read** and **write** buckets with automatic permission tagging.
+
+Instead of manually setting permissions on each tool, you declare intent:
+
+\`\`\`python
+agent.with_sandbox(
+    read_tools=[search, lookup],   # READONLY
+    write_tools=[save, update],    # WRITE
+    timeout=10                     # Max execution time
+)
+\`\`\`
+
+This is the recommended pattern for production agents — it enforces least-privilege by default.
+    `.trim(),
+    starterCode: `from agentu import Agent, Tool, ToolPermission
+
+def read_database(query: str) -> str:
+    """Read from database (safe)."""
+    return f"Query result for '{query}': [row1, row2, row3]"
+
+def read_config(key: str) -> str:
+    """Read config value (safe)."""
+    configs = {"theme": "dark", "lang": "en", "region": "US"}
+    return configs.get(key, "not found")
+
+def write_log(message: str) -> str:
+    """Write to log file (side effect)."""
+    return f"Logged: {message}"
+
+def update_record(id: str, data: str) -> str:
+    """Update a database record (side effect)."""
+    return f"Updated record {id}: {data}"
+
+# Sandbox separates read vs write automatically
+agent = Agent("sandboxed-bot").with_sandbox(
+    read_tools=[read_database, read_config],
+    write_tools=[write_log, update_record],
+    timeout=10,
+)
+
+# Read tools work freely
+result = await agent.call("read_database", {"query": "SELECT * FROM users"})
+print(f"Read: {result}")
+
+result = await agent.call("read_config", {"key": "theme"})
+print(f"Config: {result}")
+
+# Write tools also work (WRITE permission, not DANGEROUS)
+result = await agent.call("write_log", {"message": "User logged in"})
+print(f"Write: {result}")
+
+# Show permission levels
+print("\\nTool permissions:")
+for tool in agent.list_tools():
+    t = agent._tools[tool["name"]]
+    print(f"  {tool['name']}: {t.permission.value}")
+`,
+    exercise: `**Exercise:** Create a file manager agent with \`read_file\`, \`list_dir\` as read tools and \`write_file\`, \`delete_file\` as write tools. Then add \`delete_file\` as a DANGEROUS tool instead and show it gets blocked.`,
+    hint: "Use `with_sandbox()` for read/write, then manually add a `Tool(delete_file, permission=ToolPermission.DANGEROUS)` via `with_tools()`.",
+    solution: `from agentu import Agent, Tool, ToolPermission
+
+def read_file(path: str) -> str:
+    return f"Contents of {path}: Hello world!"
+
+def list_dir(path: str) -> str:
+    return f"Files in {path}: a.txt, b.txt, c.txt"
+
+def write_file(path: str, content: str) -> str:
+    return f"Wrote {len(content)} bytes to {path}"
+
+def delete_file(path: str) -> str:
+    return f"DELETED {path}"
+
+agent = Agent("file-mgr").with_sandbox(
+    read_tools=[read_file, list_dir],
+    write_tools=[write_file],
+).with_tools([
+    Tool(delete_file, permission=ToolPermission.DANGEROUS)
+])
+
+await agent.call("read_file", {"path": "/data/config.json"})
+await agent.call("list_dir", {"path": "/data"})
+await agent.call("write_file", {"path": "/tmp/out.txt", "content": "hello"})
+print("Read and write tools work fine!")
+
+try:
+    await agent.call("delete_file", {"path": "/data/config.json"})
+except PermissionError as e:
+    print(f"\\nBlocked: {e}")
+`,
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 10: Sessions
+  // -----------------------------------------------------------------------
+  {
+    id: "sessions",
+    title: "Sessions",
+    description: `
+Sessions give agents **stateful, multi-turn conversations** where context is preserved automatically.
+
+- \`SessionManager()\` — manages multiple concurrent sessions
+- \`session.send(message)\` — send a message and get a response
+- \`session.get_history()\` — retrieve conversation history
+- Each session tracks turns, memory stats, and metadata
+- Multiple users get **isolated** sessions (no cross-contamination)
+    `.trim(),
+    starterCode: `from agentu import Agent, Tool, SessionManager
+
+def get_weather(city: str) -> str:
+    """Get weather for a city."""
+    return f"The weather in {city} is sunny and 72F"
+
+def set_reminder(task: str, time: str) -> str:
+    """Set a reminder."""
+    return f"Reminder set: '{task}' at {time}"
+
+agent = Agent("assistant").with_tools([
+    Tool(get_weather), Tool(set_reminder)
+]).with_mock_responses([
+    "It's sunny and 72F in San Francisco!",
+    "It's rainy and 55F in Seattle!",
+    "Reminder set for tomorrow at 9am!",
+])
+
+manager = SessionManager()
+
+# Create a session for user Alice
+session = manager.create_session(agent, metadata={"user": "alice"})
+print(f"Session created: {session.session_id}")
+
+# Multi-turn conversation
+r1 = await session.send("What's the weather in SF?")
+print(f"\\nTurn {r1['session_info']['turn']}: {r1['result']}")
+
+r2 = await session.send("What about Seattle?")
+print(f"Turn {r2['session_info']['turn']}: {r2['result']}")
+
+r3 = await session.send("Remind me to check weather tomorrow")
+print(f"Turn {r3['session_info']['turn']}: {r3['result']}")
+
+# Conversation history
+print(f"\\n=== History ({session.turn_count} turns) ===")
+for entry in session.get_history():
+    print(f"  [{entry.role}] {entry.content}")
+
+# Session management
+print(f"\\nActive sessions: {manager.list_sessions()}")
+print(f"Memory stats: {r3['session_info']['memory_stats']}")
+`,
+    exercise: `**Exercise:** Create 2 sessions for different users (Alice and Bob). Send different messages to each. Then verify their histories are isolated — Alice shouldn't see Bob's messages.`,
+    hint: "Create two sessions with `manager.create_session()`. Each session has its own `.get_history()` — verify they contain different content.",
+    solution: `from agentu import Agent, SessionManager
+
+agent = Agent("assistant").with_mock_responses([
+    "I love pizza too, Alice!",
+    "Sushi is great, Bob!",
+    "You mentioned pizza earlier!",
+    "You mentioned sushi earlier!",
+])
+
+manager = SessionManager()
+alice = manager.create_session(agent, metadata={"user": "alice"})
+bob = manager.create_session(agent, metadata={"user": "bob"})
+
+await alice.send("I love pizza")
+await bob.send("I prefer sushi")
+
+r_alice = await alice.send("What did I say?")
+r_bob = await bob.send("What did I say?")
+
+print(f"Alice's session ({alice.session_id}):")
+for e in alice.get_history():
+    print(f"  [{e.role}] {e.content}")
+
+print(f"\\nBob's session ({bob.session_id}):")
+for e in bob.get_history():
+    print(f"  [{e.role}] {e.content}")
+
+print(f"\\nActive sessions: {len(manager.list_sessions())}")
+print("Sessions are fully isolated!")
+`,
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 11: Skills
+  // -----------------------------------------------------------------------
+  {
+    id: "skills",
+    title: "Skills & rules",
+    description: `
+**Skills** give agents domain expertise with **progressive loading** (3 levels):
+
+1. **Metadata** — always loaded, near-zero context cost (~100 chars)
+2. **Instructions** — loaded only when the skill is triggered
+3. **Resources** — loaded on-demand for specific sub-tasks
+
+This avoids context bloat — a skill with 10KB of instructions only costs ~100 chars until activated.
+
+**Rules** (\`.with_rules()\`) load an \`AGENTS.md\` file as system prompt constraints.
+    `.trim(),
+    starterCode: `from agentu import Agent, Skill
+
+# Create a skill with 3-level content
+pdf_skill = Skill(
+    name="pdf-processing",
+    description="Extract text, tables, and forms from PDF files",
+    instructions="""
+## PDF Processing Guide
+
+### Text Extraction
+Use PyMuPDF for fast text extraction:
+- fitz.open(path) to load
+- page.get_text() for raw text
+- page.get_text("blocks") for structured blocks
+
+### Table Extraction  
+Use camelot or tabula for table detection.
+
+### Form Filling
+Use PyPDF2 for AcroForm fields.
+    """.strip(),
+    resources={
+        "forms": "AcroForm guide: Use reader.get_fields() to enumerate fields, then writer.update_page_form_field_values()",
+        "ocr": "For scanned PDFs: use pytesseract + pdf2image for OCR pipeline",
+    },
+)
+
+# Attach skill to agent
+agent = Agent("pdf-assistant").with_skills([pdf_skill])
+
+# Level 1: Metadata (always available, cheap)
+print("=== Level 1: Metadata (always loaded) ===")
+print(f"  Skill: {pdf_skill.name}")
+print(f"  Description: {pdf_skill.description}")
+print(f"  Context cost: ~{len(pdf_skill.description)} chars")
+
+# Level 2: Instructions (loaded on activation)
+print("\\n=== Level 2: Instructions (on-demand) ===")
+instructions = pdf_skill.load_instructions()
+print(f"  Size: {len(instructions)} chars")
+print(f"  Preview: {instructions[:80]}...")
+
+# Level 3: Resources (loaded for specific tasks)
+print("\\n=== Level 3: Resources (on-demand) ===")
+print(f"  Available: {pdf_skill.list_resources()}")
+forms = pdf_skill.load_resource("forms")
+print(f"  Forms guide: {forms[:60]}...")
+
+# Cost analysis
+total = len(pdf_skill.description) + len(instructions) + sum(
+    len(pdf_skill.load_resource(r)) for r in pdf_skill.list_resources()
+)
+print(f"\\n=== Context savings ===")
+print(f"  Always loaded: ~{len(pdf_skill.description)} chars")
+print(f"  Full content: ~{total} chars")
+print(f"  Savings: {100*(1 - len(pdf_skill.description)/total):.0f}%")
+`,
+    exercise: `**Exercise:** Create a "data-analysis" skill with instructions for pandas/SQL and resources for "visualization" and "statistics". Attach it to an agent and demonstrate the 3-level loading.`,
+    hint: "Create `Skill(name='data-analysis', description='...', instructions='...', resources={'visualization': '...', 'statistics': '...'})` and show loading at each level.",
+    solution: `from agentu import Agent, Skill
+
+data_skill = Skill(
+    name="data-analysis",
+    description="Analyze datasets with pandas, SQL, and statistical methods",
+    instructions="Use pandas for DataFrames. Key methods: read_csv(), groupby(), merge(), pivot_table(). For SQL: use sqlalchemy engine.",
+    resources={
+        "visualization": "Use matplotlib for static, plotly for interactive. Always label axes. Use fig, ax = plt.subplots().",
+        "statistics": "scipy.stats for hypothesis testing. Use ttest_ind for comparing groups, pearsonr for correlation.",
+    },
+)
+
+agent = Agent("analyst").with_skills([data_skill])
+
+print(f"Skill: {data_skill.name}")
+print(f"Description: {data_skill.description}")
+print(f"\\nInstructions ({len(data_skill.load_instructions())} chars):")
+print(f"  {data_skill.load_instructions()[:80]}...")
+print(f"\\nResources: {data_skill.list_resources()}")
+for r in data_skill.list_resources():
+    content = data_skill.load_resource(r)
+    print(f"  {r}: {content[:50]}...")
+`,
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 12: LLM inference
+  // -----------------------------------------------------------------------
+  {
+    id: "inference",
+    title: "LLM inference",
+    description: `
+\`agent.infer(prompt)\` routes a natural language query through the LLM, which can:
+
+1. Respond directly with text
+2. Call one or more tools automatically
+3. Chain multiple tool calls to answer complex questions
+
+In this codelab, we use a **mock LLM** (\`.with_mock_responses()\`) to simulate deterministic responses. In production, you'd use:
+
+\`\`\`python
+Agent("bot", model="qwen3:latest")     # Ollama
+Agent("bot", model="gpt-4o")           # OpenAI
+Agent("bot", model="claude-sonnet-4-20250514") # Anthropic
+\`\`\`
+
+The full pipeline: **prompt → rules → LLM → guardrails → cache → result**
+    `.trim(),
+    starterCode: `from agentu import Agent, Tool, NoPII
+
+def lookup_order(order_id: str) -> dict:
+    """Look up order details."""
+    orders = {
+        "ORD-001": {"status": "shipped", "tracking": "1Z999AA1"},
+        "ORD-002": {"status": "processing", "tracking": None},
+    }
+    return orders.get(order_id, {"error": "Not found"})
+
+def cancel_order(order_id: str, reason: str) -> dict:
+    """Cancel an order."""
+    return {"success": True, "order_id": order_id, "reason": reason}
+
+# Full-featured agent with all the pieces
+agent = Agent("support", model="mock") \\
+    .with_tools([Tool(lookup_order), Tool(cancel_order)]) \\
+    .with_cache(preset="basic") \\
+    .with_guardrails(output_guardrails=[NoPII()]) \\
+    .with_rules("AGENTS.md") \\
+    .with_mock_responses([
+        "Order ORD-001 is shipped with tracking 1Z999AA1.",
+        "Order ORD-002 is still processing, no tracking yet.",
+        "Order ORD-001 is shipped with tracking 1Z999AA1.",  # cache hit won't reach this
+    ])
+
+# First inference
+r1 = await agent.infer("Where is my order ORD-001?")
+print(f"Query 1: {r1}")
+
+# Different query
+r2 = await agent.infer("What about ORD-002?")
+print(f"Query 2: {r2}")
+
+# Same query as #1 — cache hit!
+r3 = await agent.infer("Where is my order ORD-001?")
+print(f"Query 3 (cached): {r3}")
+print(f"Same result? {r1 == r3}")
+
+# Check what happened
+print(f"\\nCache stats: {agent._cache.stats()}")
+print(f"Observer events: {len(agent.observer.events)}")
+cache_hits = [e for e in agent.observer.events if e['type'] == 'cache_hit']
+print(f"Cache hits: {len(cache_hits)}")
+`,
+    exercise: `**Exercise:** Build a customer support agent with \`lookup_order\`, \`cancel_order\`, and \`refund_order\` tools. Add cache, guardrails, and rules. Simulate a 3-turn conversation using \`.infer()\` and show the full observer trace.`,
+    hint: "Chain all builders: `.with_tools([...]).with_cache().with_guardrails(...).with_rules(...)`. Use `.with_mock_responses()` for deterministic output.",
+    solution: `from agentu import Agent, Tool, NoPII
+
+def lookup_order(order_id: str) -> dict:
+    return {"status": "delivered", "total": 49.99}
+
+def cancel_order(order_id: str, reason: str) -> dict:
+    return {"cancelled": True, "refund": "pending"}
+
+def refund_order(order_id: str) -> dict:
+    return {"refunded": True, "amount": 49.99}
+
+agent = Agent("cs-bot") \\
+    .with_tools([Tool(lookup_order), Tool(cancel_order), Tool(refund_order)]) \\
+    .with_cache() \\
+    .with_guardrails(output_guardrails=[NoPII()]) \\
+    .with_rules("AGENTS.md") \\
+    .with_mock_responses([
+        "Your order ORD-100 was delivered successfully.",
+        "Order cancelled. Refund is pending.",
+        "Refund of 49.99 processed to your account.",
+    ])
+
+queries = [
+    "Where is order ORD-100?",
+    "Cancel order ORD-100, wrong item",
+    "Process refund for ORD-100",
+]
+
+for q in queries:
+    result = await agent.infer(q)
+    print(f"Q: {q}\\nA: {result}\\n")
+
+# Full trace
+print("=== Observer trace ===")
+for e in agent.observer.events:
+    print(f"  {e['type']}: {dict((k,v) for k,v in e.items() if k not in ('type','timestamp'))}")
+`,
+  },
 ];
+

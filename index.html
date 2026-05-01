@@ -11,6 +11,83 @@
 </head>
 <body>
 
+  <!-- Landing page -->
+  <div class="landing" id="landing">
+    <div class="landing-inner">
+      <div class="landing-badge">interactive codelab</div>
+      <h1 class="landing-title">Learn <span class="gradient-text">agentu</span> by doing</h1>
+      <p class="landing-subtitle">Master the AI agent runtime — tools, sandboxing, workflows, guardrails, and more. Write and run real Python code directly in your browser.</p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Agent + Tools</h3>
+          <p>Create agents, attach tools, execute them with type-safe schemas.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Sandbox & Permissions</h3>
+          <p>READONLY / WRITE / DANGEROUS — least-privilege by default.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧠</div>
+          <h3>Memory</h3>
+          <p>SQLite-backed remember/recall with importance-weighted search.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3>Caching</h3>
+          <p>SHA-256 exact match, semantic, offline, and distributed presets.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>Guardrails</h3>
+          <p>NoPII, NoHallucination — auto-retry with self-correction loops.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔀</div>
+          <h3>Workflows</h3>
+          <p>Sequential (>>), parallel (&), fan-out/fan-in with lambdas.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Evaluation</h3>
+          <p>Test suites, validators, accuracy metrics, LLM-as-judge.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📡</div>
+          <h3>Observability</h3>
+          <p>Auto-tracked events, metrics, and full execution traces.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Sessions</h3>
+          <p>Multi-turn stateful conversations with isolated user contexts.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧩</div>
+          <h3>Skills & Rules</h3>
+          <p>Progressive-load domain expertise. 3-level context optimization.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3>LLM Inference</h3>
+          <p>Route queries through Ollama, OpenAI, or Anthropic models.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌐</div>
+          <h3>In-Browser Python</h3>
+          <p>Powered by Pyodide — no install, no setup, just code.</p>
+        </div>
+      </div>
+
+      <div class="landing-cta-row">
+        <button class="landing-cta" id="start-codelab">Start learning →</button>
+        <span class="landing-meta">12 lessons · ~45 min · zero setup</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Loading overlay -->
   <div class="loading-overlay" id="loading">
     <div class="loading-spinner"></div>
@@ -21,15 +98,21 @@
   <header class="topbar">
     <h1>agentu codelab</h1>
     <div class="progress-wrap">
-      <span id="progress-label">0 / 8</span>
+      <span id="progress-label">0/8 complete</span>
       <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <span class="progress-pct" id="progress-pct">0%</span>
     </div>
   </header>
 
   <!-- Layout -->
   <div class="layout">
     <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar"></nav>
+    <nav class="sidebar" id="sidebar">
+      <div class="search-wrap">
+        <input type="text" class="search-input" id="search-input" placeholder="Search lessons…" />
+      </div>
+      <div class="sidebar-lessons" id="sidebar-lessons"></div>
+    </nav>
 
     <!-- Main content -->
     <main class="content" id="main">

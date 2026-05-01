@@ -578,14 +578,134 @@ async def evaluate(agent: Agent, test_cases: list[dict], use_llm_judge=False) ->
 
 
 # ---------------------------------------------------------------------------
+# Skills
+# ---------------------------------------------------------------------------
+
+class Skill:
+    """Progressive-loading domain skill."""
+    def __init__(self, name: str, description: str, instructions=None, resources=None):
+        self.name = name
+        self.description = description
+        self._instructions = instructions if isinstance(instructions, str) else f"[Instructions for {name}]"
+        self._resources = {}
+        if resources:
+            for k, v in resources.items():
+                self._resources[k] = v if isinstance(v, str) else f"[Resource: {k}]"
+
+    def load_instructions(self) -> str:
+        return self._instructions
+
+    def load_resource(self, name: str) -> str:
+        if name not in self._resources:
+            raise KeyError(f"Resource '{name}' not found. Available: {list(self._resources.keys())}")
+        return self._resources[name]
+
+    def list_resources(self) -> list[str]:
+        return list(self._resources.keys())
+
+
+# ---------------------------------------------------------------------------
+# Sessions
+# ---------------------------------------------------------------------------
+
+class Session:
+    """Stateful conversation session."""
+    def __init__(self, agent: "Agent", session_id: str, metadata: dict = None):
+        self.agent = agent
+        self.session_id = session_id
+        self.metadata = metadata or {}
+        self.turn_count = 0
+        self._history: list[dict] = []
+
+    async def send(self, message: str) -> dict:
+        self.turn_count += 1
+        self._history.append({"role": "user", "content": message, "turn": self.turn_count})
+        result = await self.agent.infer(message)
+        self._history.append({"role": "assistant", "content": str(result), "turn": self.turn_count})
+        return {
+            "result": result,
+            "session_info": {
+                "session_id": self.session_id,
+                "turn": self.turn_count,
+                "memory_stats": {"entries": len(self.agent._memory.recall())},
+            },
+        }
+
+    def get_history(self, limit: int = 10) -> list:
+        @dataclass
+        class Entry:
+            content: str
+            role: str
+        return [Entry(content=h["content"], role=h["role"]) for h in self._history[-limit:]]
+
+
+class SessionManager:
+    """Manages multiple concurrent sessions."""
+    def __init__(self):
+        self._sessions: dict[str, Session] = {}
+        self._counter = 0
+
+    def create_session(self, agent: "Agent", metadata: dict = None) -> Session:
+        self._counter += 1
+        sid = f"session_{self._counter:04d}"
+        session = Session(agent=agent, session_id=sid, metadata=metadata)
+        self._sessions[sid] = session
+        return session
+
+    def get_session(self, session_id: str) -> Session:
+        if session_id not in self._sessions:
+            raise KeyError(f"Session '{session_id}' not found")
+        return self._sessions[session_id]
+
+    def list_sessions(self) -> list[str]:
+        return list(self._sessions.keys())
+
+    def delete_session(self, session_id: str):
+        self._sessions.pop(session_id, None)
+
+    def save_all(self):
+        pass  # No-op in codelab mock
+
+
+# ---------------------------------------------------------------------------
+# Agent: add with_skills support
+# ---------------------------------------------------------------------------
+
+# Patch Agent to support skills
+_original_init = Agent.__init__
+
+def _patched_init(self, name, model="mock", **kwargs):
+    _original_init(self, name, model, **kwargs)
+    self._skills: list[Skill] = []
+    self.tools = []  # alias for compatibility
+
+Agent.__init__ = _patched_init
+
+def _with_skills(self, skills):
+    self._skills = skills or []
+    # Add get_skill_resource tool
+    def get_skill_resource(skill_name: str, resource_name: str) -> str:
+        """Load a resource from a skill."""
+        for s in self._skills:
+            if s.name == skill_name:
+                return s.load_resource(resource_name)
+        return f"Skill '{skill_name}' not found"
+    self._tools["get_skill_resource"] = Tool(func=get_skill_resource)
+    return self
+
+Agent.with_skills = _with_skills
+
+
+# ---------------------------------------------------------------------------
 # Convenience: make 'from agentu import ...' work in codelab
 # ---------------------------------------------------------------------------
 
-# Aliases so codelab code uses real import names
 __all__ = [
     "Agent", "Tool", "ToolPermission",
     "NoPII", "NoHallucination",
     "evaluate", "EvalResults",
     "observe", "configure_observe",
     "Memory", "Cache",
+    "Skill", "SessionManager", "Session",
 ]
+
