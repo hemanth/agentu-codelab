@@ -736,7 +736,15 @@ def _with_mcp(self, servers):
     """Connect to MCP servers and import their tools."""
     self._mcp_servers = []
     for srv in (servers or []):
-        mcp = MCPServer(srv)
+        # Support dict with url + headers (auth)
+        if isinstance(srv, dict):
+            url = srv.get("url", str(srv))
+            headers = srv.get("headers", {})
+            mcp = MCPServer(url)
+            mcp.auth_headers = headers
+        else:
+            mcp = MCPServer(srv)
+            mcp.auth_headers = {}
         self._mcp_servers.append(mcp)
         # Register discovered MCP tools
         for tool_info in mcp.get_tools():

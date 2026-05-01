@@ -1055,10 +1055,34 @@ agent = Agent("bot").with_mcp([
 ])
 \`\`\`
 
-MCP servers can provide filesystem access, database queries, web search, and any custom tool set. The agent auto-discovers available tools at connection time.
+**Authentication** \u2014 agentu supports three auth modes for remote MCP servers:
+
+\`\`\`python
+# Bearer token
+agent.with_mcp([{
+    "url": "https://api.example.com/mcp",
+    "headers": {"Authorization": "Bearer sk-abc123"}
+}])
+
+# API key
+agent.with_mcp([{
+    "url": "https://api.example.com/mcp",
+    "headers": {"X-API-Key": "my-key"}
+}])
+
+# Custom headers
+agent.with_mcp([{
+    "url": "https://internal.corp/mcp",
+    "headers": {"X-Org-Id": "team-42", "X-Token": "secret"}
+}])
+\`\`\`
+
+Auth headers are sent with every JSON-RPC request (initialize, tools/list, tools/call). MCP sessions are tracked via \`mcp-session-id\` headers automatically.
+
+Transports: **HTTP** (default), **SSE** (streaming), **STDIO** (local subprocess).
 
 MCP config file format:
-\`\`\`python
+\`\`\`json
 {
   "mcpServers": {
     "filesystem": {
@@ -1071,7 +1095,7 @@ MCP config file format:
     `.trim(),
     starterCode: `from agentu import Agent, Tool, SessionManager
 
-# Connect agent to MCP servers
+# 1. Connect via config file (local servers)
 agent = Agent("file-assistant").with_mcp([
     "~/.agentu/mcp_config.json",   # filesystem MCP server
 ]).with_mock_responses([
@@ -1093,10 +1117,22 @@ print(f"list_directory: {result}")
 result = await agent.call("read_file", {"path": "/tmp/notes.txt"})
 print(f"read_file: {result}")
 
-result = await agent.call("write_file", {"path": "/tmp/out.txt", "content": "hello"})
-print(f"write_file: {result}")
+# 2. Connect with authentication (remote servers)
+print("\\n=== Authenticated MCP connection ===")
+auth_agent = Agent("secure-bot").with_mcp([
+    # Bearer token auth
+    {"url": "https://api.example.com/mcp",
+     "headers": {"Authorization": "Bearer sk-abc123"}},
+    # API key auth
+    {"url": "https://db.example.com/mcp",
+     "headers": {"X-API-Key": "my-key-456"}},
+])
 
-# Use with sessions for stateful MCP interactions
+print(f"Authenticated agent has {len(auth_agent.list_tools())} tools:")
+for tool in auth_agent.list_tools():
+    print(f"  {tool['name']}: {tool['description']}")
+
+# 3. Use with sessions for stateful MCP interactions
 print("\\n=== Stateful MCP session ===")
 manager = SessionManager()
 session = manager.create_session(agent, metadata={"user": "demo"})
@@ -1107,11 +1143,7 @@ print(f"Turn 1: {r1['result']}")
 r2 = await session.send("Read the first file")
 print(f"Turn 2: {r2['result']}")
 
-r3 = await session.send("Write a summary to output.txt")
-print(f"Turn 3: {r3['result']}")
-
 print(f"\\nSession turns: {session.turn_count}")
-print(f"Total tools available: {len(agent.list_tools())}")
 `,
     exercise: `**Exercise:** Connect to two MCP servers (a "database" server and a "search" server). List all discovered tools from both, then call one tool from each server.`,
     hint: "Use `.with_mcp(['database-server', 'search-server'])`. The mock auto-generates tools based on the server name containing 'database' or 'search'.",
