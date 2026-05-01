@@ -1,5 +1,5 @@
 /**
- * agentu codelab — lesson content
+ * agentu codelab - lesson content
  *
  * Each lesson has: title, description, starter code, exercise, hint, solution
  */
@@ -17,7 +17,7 @@ Create an agent, give it tools, and call them directly with \`agent.call()\`.
 An **agent** is just a named runtime that holds tools and can execute them.
 A **tool** is any Python function. The agent wraps it with permissions, observability, and sandboxing.
 
-\`agent.call("tool_name", {params})\` runs a tool directly — no LLM needed.
+\`agent.call("tool_name", {params})\` runs a tool directly - no LLM needed.
     `.trim(),
     starterCode: `from agentu import Agent
 
@@ -31,7 +31,7 @@ def multiply(x: int, y: int) -> int:
 
 agent = Agent("calculator").with_tools([add, multiply])
 
-# Direct tool execution — no LLM needed
+# Direct tool execution - no LLM needed
 result = await agent.call("add", {"x": 5, "y": 3})
 print(f"5 + 3 = {result}")
 
@@ -93,9 +93,9 @@ except ValueError as e:
 Not all tools are created equal. A search function is harmless. A delete function is not.
 
 agentu has three permission levels:
-- **READONLY** — always allowed, no side effects (default)
-- **WRITE** — allowed but logged, has side effects
-- **DANGEROUS** — blocked by default, must be explicitly allowed
+- **READONLY** - always allowed, no side effects (default)
+- **WRITE** - allowed but logged, has side effects
+- **DANGEROUS** - blocked by default, must be explicitly allowed
 
 This gives you fine-grained control over what an agent can do.
     `.trim(),
@@ -168,8 +168,8 @@ Agents can remember things across interactions using \`.remember()\` and \`.reca
 
 Memory is SQLite-backed, searchable, and sorted by importance.
 
-- \`agent.remember(content, importance=0.9)\` — store a fact
-- \`agent.recall(query)\` — search memories by keyword
+- \`agent.remember(content, importance=0.9)\` - store a fact
+- \`agent.recall(query)\` - search memories by keyword
 - Importance (0.0–1.0) determines recall priority
     `.trim(),
     starterCode: `from agentu import Agent
@@ -230,10 +230,10 @@ print(f"\\n{len(important)} high-priority out of {len(all_memories)} total")
 Skip redundant LLM calls by caching responses. Works with strings and full conversations.
 
 Presets:
-- **basic** — exact match (SHA-256 hash)
-- **smart** — semantic matching (cosine similarity)
-- **offline** — filesystem backup
-- **distributed** — Redis-backed
+- **basic** - exact match (SHA-256 hash)
+- **smart** - semantic matching (cosine similarity)
+- **offline** - filesystem backup
+- **distributed** - Redis-backed
 
 Cache keys are: \`hash(prompt + namespace + temperature)\`.
 Same prompt to the same agent = instant response from cache.
@@ -305,8 +305,8 @@ When an output guardrail fails:
 3. The LLM tries again (up to \`max_corrections\`)
 
 Built-in guardrails:
-- **NoPII** — blocks output containing emails, phone numbers, SSNs
-- **NoHallucination** — blocks "as an AI" and similar hedging patterns
+- **NoPII** - blocks output containing emails, phone numbers, SSNs
+- **NoHallucination** - blocks "as an AI" and similar hedging patterns
     `.trim(),
     starterCode: `from agentu import Agent, NoPII, NoHallucination
 
@@ -362,9 +362,9 @@ for c in corrections:
     title: "Workflows",
     description: `
 Chain agents with operators:
-- \`>>\` — **sequential** (one after another, output flows forward)
-- \`&\` — **parallel** (all at once, results collected)
-- Combine them: \`(a & b & c) >> d\` — fan-out then fan-in
+- \`>>\` - **sequential** (one after another, output flows forward)
+- \`&\` - **parallel** (all at once, results collected)
+- Combine them: \`(a & b & c) >> d\` - fan-out then fan-in
 
 Use lambdas to transform data between steps:
 \`\`\`python
@@ -452,10 +452,10 @@ results = await evaluate(agent, test_cases)
 \`\`\`
 
 Matching strategies:
-- **Exact** — numbers and exact strings
-- **Substring** — expected appears somewhere in actual
-- **Custom validator** — \`lambda expected, actual: ...\`
-- **LLM-as-judge** — semantic similarity (requires real LLM)
+- **Exact** - numbers and exact strings
+- **Substring** - expected appears somewhere in actual
+- **Custom validator** - \`lambda expected, actual: ...\`
+- **LLM-as-judge** - semantic similarity (requires real LLM)
     `.trim(),
     starterCode: `from agentu import Agent, Tool, evaluate
 
@@ -550,7 +550,7 @@ Every tool call, LLM request, self-correction, and error is tracked automaticall
 Events captured:
 \`tool_call\` · \`tool_blocked\` · \`tool_result\` · \`self_correction\` · \`inference_start\` · \`inference_end\` · \`error\` · \`memory_store\` · \`memory_recall\` · \`cache_hit\`
 
-Access metrics with \`agent.observer.get_metrics()\` — tool calls, errors, duration.
+Access metrics with \`agent.observer.get_metrics()\` - tool calls, errors, duration.
 Access raw events with \`agent.observer.events\`.
     `.trim(),
     starterCode: `from agentu import Agent, Tool, ToolPermission, NoPII
@@ -570,7 +570,7 @@ agent = Agent("observed-bot").with_tools([
     output_guardrails=[NoPII()],
     max_corrections=1,
 ).with_mock_responses([
-    "Contact alice@example.com for details.",  # PII — will be caught
+    "Contact alice@example.com for details.",  # PII - will be caught
     "The search results are ready for review.", # Clean
 ])
 
@@ -580,7 +580,7 @@ await agent.call("search", {"query": "laptops"})
 try:
     await agent.call("delete_item", {"id": "item_42"})
 except PermissionError:
-    pass  # Expected — DANGEROUS is blocked
+    pass  # Expected - DANGEROUS is blocked
 
 agent.remember("User prefers dark mode", importance=0.8)
 agent.recall("preferences")
@@ -655,7 +655,7 @@ agent.with_sandbox(
 )
 \`\`\`
 
-This is the recommended pattern for production agents — it enforces least-privilege by default.
+This is the recommended pattern for production agents - it enforces least-privilege by default.
     `.trim(),
     starterCode: `from agentu import Agent, Tool, ToolPermission
 
@@ -744,9 +744,9 @@ except PermissionError as e:
     description: `
 Sessions give agents **stateful, multi-turn conversations** where context is preserved automatically.
 
-- \`SessionManager()\` — manages multiple concurrent sessions
-- \`session.send(message)\` — send a message and get a response
-- \`session.get_history()\` — retrieve conversation history
+- \`SessionManager()\` - manages multiple concurrent sessions
+- \`session.send(message)\` - send a message and get a response
+- \`session.get_history()\` - retrieve conversation history
 - Each session tracks turns, memory stats, and metadata
 - Multiple users get **isolated** sessions (no cross-contamination)
     `.trim(),
@@ -793,8 +793,8 @@ for entry in session.get_history():
 print(f"\\nActive sessions: {manager.list_sessions()}")
 print(f"Memory stats: {r3['session_info']['memory_stats']}")
 `,
-    exercise: `**Exercise:** Create 2 sessions for different users (Alice and Bob). Send different messages to each. Then verify their histories are isolated — Alice shouldn't see Bob's messages.`,
-    hint: "Create two sessions with `manager.create_session()`. Each session has its own `.get_history()` — verify they contain different content.",
+    exercise: `**Exercise:** Create 2 sessions for different users (Alice and Bob). Send different messages to each. Then verify their histories are isolated - Alice shouldn't see Bob's messages.`,
+    hint: "Create two sessions with `manager.create_session()`. Each session has its own `.get_history()` - verify they contain different content.",
     solution: `from agentu import Agent, SessionManager
 
 agent = Agent("assistant").with_mock_responses([
@@ -836,11 +836,11 @@ print("Sessions are fully isolated!")
     description: `
 **Skills** give agents domain expertise with **progressive loading** (3 levels):
 
-1. **Metadata** — always loaded, near-zero context cost (~100 chars)
-2. **Instructions** — loaded only when the skill is triggered
-3. **Resources** — loaded on-demand for specific sub-tasks
+1. **Metadata** - always loaded, near-zero context cost (~100 chars)
+2. **Instructions** - loaded only when the skill is triggered
+3. **Resources** - loaded on-demand for specific sub-tasks
 
-This avoids context bloat — a skill with 10KB of instructions only costs ~100 chars until activated.
+This avoids context bloat - a skill with 10KB of instructions only costs ~100 chars until activated.
 
 **Rules** (\`.with_rules()\`) load an \`AGENTS.md\` file as system prompt constraints.
     `.trim(),
@@ -985,7 +985,7 @@ print(f"Query 1: {r1}")
 r2 = await agent.infer("What about ORD-002?")
 print(f"Query 2: {r2}")
 
-# Same query as #1 — cache hit!
+# Same query as #1 - cache hit!
 r3 = await agent.infer("Where is my order ORD-001?")
 print(f"Query 3 (cached): {r3}")
 print(f"Same result? {r1 == r3}")
