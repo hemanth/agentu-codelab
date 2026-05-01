@@ -335,15 +335,15 @@ btnNext.addEventListener("click", () => {
       localStorage.setItem("agentu-codelab-completed", JSON.stringify(completed));
       updateSidebar();
     }
-    $("#congrats-overlay").classList.remove("hidden");
+    $("congrats-overlay").classList.remove("hidden");
   }
 });
 
 // Restart from congrats screen
-$("#congrats-restart").addEventListener("click", () => {
+$("congrats-restart").addEventListener("click", () => {
   completed = [];
   localStorage.removeItem("agentu-codelab-completed");
-  $("#congrats-overlay").classList.add("hidden");
+  $("congrats-overlay").classList.add("hidden");
   renderLesson(0);
 });
 
