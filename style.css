@@ -536,6 +536,114 @@ body {
   font-size: 0.875rem;
 }
 
+/* ---------- Congratulations overlay ---------- */
+.congrats-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.6s;
+}
+.congrats-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.congrats-inner {
+  text-align: center;
+  max-width: 520px;
+  padding: 0 24px;
+  position: relative;
+}
+.congrats-glow {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(45, 212, 191, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.congrats-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), #67e8f9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+  position: relative;
+}
+.congrats-sub {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+.congrats-stats {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  margin-bottom: 32px;
+}
+.congrats-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.congrats-stat-num {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.congrats-stat-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.congrats-next {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 28px;
+}
+.congrats-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.congrats-btn {
+  padding: 12px 28px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-decoration: none;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.congrats-btn:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.congrats-btn.primary {
+  background: linear-gradient(135deg, var(--accent), #67e8f9);
+  color: #0a0e1a;
+  border: none;
+  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.25);
+}
+.congrats-btn.primary:hover {
+  box-shadow: 0 6px 24px rgba(45, 212, 191, 0.35);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
   .sidebar { display: none; }

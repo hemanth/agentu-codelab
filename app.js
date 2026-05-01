@@ -329,15 +329,22 @@ btnNext.addEventListener("click", () => {
   if (currentLesson < lessons.length - 1) {
     renderLesson(currentLesson + 1);
   } else {
-    // Last lesson — mark complete and celebrate
+    // Last lesson — mark complete and show congrats
     if (!completed.includes(currentLesson)) {
       completed.push(currentLesson);
       localStorage.setItem("agentu-codelab-completed", JSON.stringify(completed));
       updateSidebar();
     }
-    btnNext.textContent = "All done";
-    btnNext.disabled = true;
+    $("#congrats-overlay").classList.remove("hidden");
   }
+});
+
+// Restart from congrats screen
+$("#congrats-restart").addEventListener("click", () => {
+  completed = [];
+  localStorage.removeItem("agentu-codelab-completed");
+  $("#congrats-overlay").classList.add("hidden");
+  renderLesson(0);
 });
 
 document.addEventListener("keydown", (e) => {
