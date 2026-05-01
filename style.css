@@ -691,7 +691,17 @@ body {
   .sidebar.open { transform: translateX(0); }
 
   .content { padding: 20px 16px; }
-  .topbar { padding-left: 56px; }
+
+  /* Topbar: compact for mobile */
+  .topbar {
+    padding: 10px 12px 10px 52px;
+    gap: 8px;
+  }
+  .topbar h1 { font-size: 0.95rem; }
+  .topbar .progress-wrap { gap: 6px; font-size: 0.7rem; }
+  .topbar .progress-wrap #progress-label { display: none; }
+  .topbar .progress-bar { width: 80px; height: 6px; }
+  .topbar .progress-pct { font-size: 0.7rem; min-width: 28px; }
 
   /* Landing page: allow scroll on mobile */
   .landing { overflow: auto; }
