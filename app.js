@@ -35,6 +35,17 @@ const btnReset = $("btn-reset");
 const btnSolution = $("btn-solution");
 const btnPrev = $("btn-prev");
 const btnNext = $("btn-next");
+const sidebarToggle = $("sidebar-toggle");
+const sidebarBackdrop = $("sidebar-backdrop");
+const sidebarNav = $("sidebar");
+
+function toggleSidebar(open) {
+  const isOpen = open ?? !sidebarNav.classList.contains("open");
+  sidebarNav.classList.toggle("open", isOpen);
+  sidebarBackdrop.classList.toggle("open", isOpen);
+}
+sidebarToggle.addEventListener("click", () => toggleSidebar());
+sidebarBackdrop.addEventListener("click", () => toggleSidebar(false));
 
 // ---------------------------------------------------------------------------
 // Simple markdown → HTML
@@ -259,7 +270,7 @@ function buildSidebar() {
     item.className = "sidebar-item";
     item.dataset.index = i;
     item.innerHTML = `<span class="dot"></span><span class="sidebar-num">${i + 1}.</span><span>${lesson.title}</span>`;
-    item.addEventListener("click", () => renderLesson(i));
+    item.addEventListener("click", () => { renderLesson(i); toggleSidebar(false); });
     sidebarEl.appendChild(item);
   });
   updateSidebar();
