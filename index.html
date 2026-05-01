@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agentu codelab — learn by doing</title>
+  <meta name="description" content="Interactive browser-based codelab for the agentu AI agent runtime. Write and run Python code directly in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loading-text">Loading Python runtime…</div>
+  </div>
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <h1>agentu codelab</h1>
+    <div class="progress-wrap">
+      <span id="progress-label">0 / 8</span>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+  </header>
+
+  <!-- Layout -->
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar"></nav>
+
+    <!-- Main content -->
+    <main class="content" id="main">
+      <div class="lesson-num" id="lesson-num"></div>
+      <h2 class="lesson-title" id="lesson-title"></h2>
+      <div class="lesson-desc" id="lesson-desc"></div>
+
+      <!-- Editor -->
+      <div class="editor-wrap">
+        <div class="editor-header">
+          <span>main.py</span>
+          <span id="editor-status"></span>
+        </div>
+        <div id="editor-container"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-run" id="btn-run" disabled>▶ Run</button>
+        <button class="btn btn-reset" id="btn-reset">Reset</button>
+        <button class="btn btn-solution" id="btn-solution">Show solution</button>
+      </div>
+
+      <!-- Output -->
+      <div class="output-wrap">
+        <div class="output-header">
+          <span>Output</span>
+          <span id="output-status"></span>
+        </div>
+        <div id="output"><span class="output-empty">Run your code to see output here</span></div>
+      </div>
+
+      <!-- Exercise -->
+      <div class="exercise" id="exercise-wrap">
+        <h3>📝 Exercise</h3>
+        <p id="exercise-text"></p>
+        <button class="hint-toggle" id="hint-toggle">Show hint</button>
+        <div class="hint-text" id="hint-text"></div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="nav-bottom">
+        <button class="nav-btn" id="btn-prev" disabled>← Previous</button>
+        <button class="nav-btn primary" id="btn-next">Next →</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js"></script>
+
+  <!-- Monaco Editor -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+
+  <!-- Lessons -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
