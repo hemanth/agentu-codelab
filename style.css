@@ -1,19 +1,19 @@
 * { margin: 0; box-sizing: border-box; }
 
 :root {
-  --bg: #0a0e1a;
-  --bg-surface: #111827;
-  --bg-elevated: #1e293b;
-  --border: #334155;
-  --text: #e2e8f0;
-  --text-muted: #94a3b8;
-  --accent: #2dd4bf;
+  --bg: #0a0e1a;           /* Void Black */
+  --bg-surface: #141824;   /* Console Surface */
+  --bg-elevated: #1e2536;  /* Wire Grey (elevated) */
+  --border: #1e2536;       /* Wire Grey */
+  --text: #e2e8f0;         /* Signal White */
+  --text-muted: #8892a8;   /* Exhaust Grey */
+  --accent: #2dd4bf;       /* Reactor Teal */
   --accent-dim: #14b8a6;
-  --accent-glow: rgba(45, 212, 191, 0.12);
+  --accent-glow: rgba(45, 212, 191, 0.08); /* Reactor Glow */
   --green: #34d399;
   --red: #f87171;
   --orange: #fbbf24;
-  --radius: 12px;
+  --radius: 8px;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --font-sans: 'Inter', system-ui, sans-serif;
 }
@@ -373,7 +373,7 @@ body {
   font-weight: 600;
 }
 
-/* ---------- Landing page ---------- */
+/* ---------- Landing page (DESIGN.md: deep-space cockpit) ---------- */
 .landing {
   position: fixed;
   inset: 0;
@@ -387,6 +387,8 @@ body {
   transform: translateY(-20px);
   pointer-events: none;
 }
+
+/* Three-zone flex column, vertically centered */
 .landing-inner {
   width: 100%;
   height: 100vh;
@@ -396,10 +398,12 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 3vh 4vw;
-  box-sizing: border-box;
   gap: 2.5vh;
+  padding: 0 32px;
+  box-sizing: border-box;
 }
+
+/* Zone 1: Header */
 .landing-header {
   text-align: center;
 }
@@ -414,13 +418,13 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   border: 1px solid rgba(45, 212, 191, 0.2);
-  margin-bottom: 1vh;
+  margin-bottom: 12px;
 }
 .landing-title {
-  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-size: clamp(1.5rem, 2.8vw, 2.2rem);
   font-weight: 800;
   line-height: 1.1;
-  margin-bottom: 0.5vh;
+  margin-bottom: 6px;
   color: var(--text);
 }
 .gradient-text {
@@ -430,50 +434,49 @@ body {
   background-clip: text;
 }
 .landing-subtitle {
-  font-size: clamp(0.8rem, 1.1vw, 0.95rem);
+  font-size: 0.9rem;
   color: var(--text-muted);
-  max-width: 520px;
+  max-width: 480px;
   margin: 0 auto;
   line-height: 1.45;
 }
 
-/* --- Feature grid: auto-height, centered --- */
+/* Zone 2: Feature grid — the hero */
 .feature-grid {
   width: 100%;
-  max-width: 1200px;
+  max-width: 960px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: clamp(8px, 0.8vw, 14px);
+  gap: 10px;
 }
 .feature-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: clamp(12px, 1.2vw, 20px);
-  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  border-radius: 8px;
+  padding: 16px 18px;
   cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .feature-card:hover {
   border-color: var(--accent);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(45, 212, 191, 0.1);
+  box-shadow: 0 4px 16px rgba(45, 212, 191, 0.08);
 }
 .feature-card h3 {
-  font-size: clamp(0.72rem, 0.85vw, 0.9rem);
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--text);
   margin-bottom: 4px;
-  white-space: nowrap;
 }
 .feature-card p {
-  font-size: clamp(0.65rem, 0.72vw, 0.8rem);
+  font-size: 0.78rem;
+  font-weight: 400;
   color: var(--text-muted);
   line-height: 1.4;
 }
 
-/* --- CTA --- */
+/* Zone 3: CTA */
 .landing-cta-row {
-  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -533,13 +536,15 @@ body {
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .content { padding: 20px 16px; }
-  .landing-inner { padding: 2vh 3vw 2vh; }
-  .landing-title { font-size: 1.5rem; }
+  .landing-inner { padding: 0 16px; gap: 2vh; }
+  .landing-title { font-size: 1.4rem; }
+  .landing-subtitle { font-size: 0.8rem; }
   .feature-grid {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
-  .feature-card { padding: 10px; }
+  .feature-card { padding: 12px 14px; }
+  .feature-card h3 { font-size: 0.78rem; }
+  .feature-card p { font-size: 0.7rem; }
 }
 
