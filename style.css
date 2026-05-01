@@ -648,15 +648,44 @@ body {
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .content { padding: 20px 16px; }
-  .landing-inner { padding: 0 16px; gap: 2vh; }
-  .landing-title { font-size: 1.4rem; }
-  .landing-subtitle { font-size: 0.8rem; }
+
+  .landing-inner {
+    justify-content: flex-start;
+    padding: 24px 16px 20px;
+    gap: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .landing-badge { margin-bottom: 8px; font-size: 0.65rem; }
+  .landing-title { font-size: 1.5rem; margin-bottom: 4px; }
+  .landing-subtitle { font-size: 0.8rem; max-width: 100%; }
+
   .feature-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+    max-width: 100%;
   }
-  .feature-card { padding: 12px 14px; }
-  .feature-card h3 { font-size: 0.78rem; }
-  .feature-card p { font-size: 0.7rem; }
+  .feature-card { padding: 10px 12px; }
+  .feature-card h3 { font-size: 0.75rem; margin-bottom: 2px; }
+  .feature-card p {
+    font-size: 0.65rem;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .landing-cta { padding: 10px 28px; font-size: 0.9rem; }
+  .landing-meta { font-size: 0.7rem; }
+}
+
+@media (max-width: 380px) {
+  .landing-title { font-size: 1.3rem; }
+  .feature-card p { display: none; }
+  .feature-card { padding: 8px 10px; }
+  .feature-card h3 { font-size: 0.72rem; }
+  .feature-grid { gap: 6px; }
 }
 
