@@ -293,6 +293,7 @@ class Agent:
 
     def with_cache(self, preset="basic", **kwargs):
         self._cache = Cache(preset=preset, **kwargs)
+        self.cache_enabled = True
         return self
 
     def with_guardrails(self, output_guardrails=None, max_corrections=2):
