@@ -7,13 +7,13 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <meta name="description" content="Interactive browser-based codelab for the agentu AI agent runtime. Write and run Python code directly in your browser." />
   <meta property="og:title" content="agentu codelab - learn the AI agent runtime by doing" />
-  <meta property="og:description" content="16 hands-on lessons covering tools, sandboxing, workflows, guardrails, and more. Write and run real Python code in your browser." />
+  <meta property="og:description" content="34 hands-on lessons covering tools, sandboxing, workflows, guardrails, and more. Write and run real Python code in your browser." />
   <meta property="og:image" content="https://hemanth.github.io/agentu-codelab/og.png" />
   <meta property="og:url" content="https://hemanth.github.io/agentu-codelab/" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="agentu codelab" />
-  <meta name="twitter:description" content="Learn the AI agent runtime by doing. 16 interactive lessons in your browser." />
+  <meta name="twitter:description" content="Learn the AI agent runtime by doing. 34 interactive lessons in your browser." />
   <meta name="twitter:image" content="https://hemanth.github.io/agentu-codelab/og.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -47,11 +47,28 @@
         <div class="feature-card" data-lesson="13"><h3>REST API</h3><p>Serve agents via HTTP, WebSocket, and SSE with one call.</p></div>
         <div class="feature-card" data-lesson="14"><h3>Rules</h3><p>Feedforward AGENTS.md rules prepended to every LLM call.</p></div>
         <div class="feature-card" data-lesson="15"><h3>Middleware</h3><p>CostTracker, Logger, Retry - composable processing pipeline.</p></div>
+        <div class="feature-card" data-lesson="16"><h3>Hooks</h3><p>Pre/post-tool callbacks with ALLOW, DENY, and MODIFY actions.</p></div>
+        <div class="feature-card" data-lesson="17"><h3>Structured Output</h3><p>Typed, validated responses with Pydantic-style schemas.</p></div>
+        <div class="feature-card" data-lesson="18"><h3>Code Mode</h3><p>LLM writes Python that chains tool calls in one shot.</p></div>
+        <div class="feature-card" data-lesson="19"><h3>Multi-modal</h3><p>Send images alongside text for vision-capable models.</p></div>
+        <div class="feature-card" data-lesson="20"><h3>Context Mgmt</h3><p>Tiered compaction prevents context window overflow.</p></div>
+        <div class="feature-card" data-lesson="21"><h3>Ralph Mode</h3><p>Autonomous loops with progress tracking and checkpoints.</p></div>
+        <div class="feature-card" data-lesson="22"><h3>Schedules</h3><p>Interval and cron automations with SQLite-persisted findings.</p></div>
+        <div class="feature-card" data-lesson="23"><h3>Sub-agents</h3><p>Maker-checker patterns, judge panels, and best-of-N.</p></div>
+        <div class="feature-card" data-lesson="24"><h3>Worktrees</h3><p>Git worktree isolation for parallel code-editing agents.</p></div>
+        <div class="feature-card" data-lesson="25"><h3>Safety</h3><p>Lethal trifecta detection and untrusted content spotlighting.</p></div>
+        <div class="feature-card" data-lesson="26"><h3>Tool Search</h3><p>Deferred tools discovered on-demand from hundreds of tools.</p></div>
+        <div class="feature-card" data-lesson="27"><h3>Declarative</h3><p>Deploy agents from YAML/JSON config with zero code.</p></div>
+        <div class="feature-card" data-lesson="28"><h3>Rationale</h3><p>Record architectural decisions with searchable audit trails.</p></div>
+        <div class="feature-card" data-lesson="29"><h3>Checkpoints</h3><p>Session checkpoint, fork, and resume for crash recovery.</p></div>
+        <div class="feature-card" data-lesson="30"><h3>OpenTelemetry</h3><p>GenAI semantic convention spans for production tracing.</p></div>
+        <div class="feature-card" data-lesson="31"><h3>Task Queue</h3><p>Background tasks with concurrency control and TTL expiry.</p></div>
+        <div class="feature-card" data-lesson="32"><h3>Storage</h3><p>Pluggable backends — SQLite, Redis, LanceDB, custom.</p></div>
       </div>
 
       <div class="landing-cta-row">
         <button class="landing-cta" id="start-codelab">Start learning</button>
-        <span class="landing-meta">16 lessons &middot; ~60 min &middot; zero setup</span>
+        <span class="landing-meta">34 lessons &middot; ~2 hours &middot; zero setup</span>
       </div>
     </div>
   </div>
@@ -66,7 +83,7 @@
   <header class="topbar">
     <h1>agentu codelab</h1>
     <div class="progress-wrap">
-      <span id="progress-label">0/16 complete</span>
+      <span id="progress-label">0/34 complete</span>
       <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
       <span class="progress-pct" id="progress-pct">0%</span>
     </div>
@@ -135,18 +152,18 @@
     <div class="congrats-inner">
       <div class="congrats-glow"></div>
       <h1 class="congrats-title">Congratulations</h1>
-      <p class="congrats-sub">You completed all 16 lessons of the agentu codelab.</p>
+      <p class="congrats-sub">You completed all 34 lessons of the agentu codelab.</p>
       <div class="congrats-stats">
         <div class="congrats-stat">
-          <span class="congrats-stat-num" id="congrats-lessons">16</span>
+          <span class="congrats-stat-num" id="congrats-lessons">34</span>
           <span class="congrats-stat-label">lessons</span>
         </div>
         <div class="congrats-stat">
-          <span class="congrats-stat-num">16</span>
+          <span class="congrats-stat-num">34</span>
           <span class="congrats-stat-label">features</span>
         </div>
         <div class="congrats-stat">
-          <span class="congrats-stat-num">~60</span>
+          <span class="congrats-stat-num">~120</span>
           <span class="congrats-stat-label">minutes</span>
         </div>
       </div>
