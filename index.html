@@ -24,18 +24,28 @@
 
   <!-- Landing page -->
   <div class="landing" id="landing">
+    <!-- Animated background orbs -->
+    <div class="landing-bg">
+      <div class="landing-orb landing-orb-1"></div>
+      <div class="landing-orb landing-orb-2"></div>
+      <div class="landing-orb landing-orb-3"></div>
+    </div>
+
     <div class="landing-inner">
       <!-- Left column: hero -->
       <div class="landing-hero">
         <div class="landing-header">
-          <div class="landing-badge">interactive codelab</div>
-          <h1 class="landing-title">Learn <span class="gradient-text">agentu</span> by doing</h1>
-          <p class="landing-subtitle">Master the AI agent runtime — tools, sandboxing, workflows, guardrails, and more. Write and run real Python code directly in your browser.</p>
+          <div class="landing-badge"><span class="badge-dot"></span>interactive codelab</div>
+          <h1 class="landing-title">Learn <span class="gradient-text">agentu</span><br>by doing</h1>
+          <p class="landing-subtitle">Master the AI agent runtime — tools, memory, guardrails, workflows, and more. Write and run real Python directly in your browser.</p>
         </div>
-        <code class="install-banner">pip install agentu</code>
+        <code class="install-banner"><span class="install-prompt">$</span> pip install agentu</code>
         <div class="landing-cta-row">
-          <button class="landing-cta" id="start-codelab">Start learning</button>
-          <span class="landing-meta">35 lessons &middot; ~2 hours &middot; zero setup</span>
+          <button class="landing-cta" id="start-codelab">
+            Start learning
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="margin-left:6px"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="landing-meta">35 lessons · ~2 hours · zero setup</span>
         </div>
       </div>
 
@@ -103,7 +113,7 @@
             <span class="pill" data-lesson="13">REST API</span>
             <span class="pill" data-lesson="28">Rationale</span>
             <span class="pill" data-lesson="30">OpenTelemetry</span>
-            <span class="pill pill-capstone" data-lesson="34">★ Capstone</span>
+            <span class="pill pill-capstone" data-lesson="34">Capstone</span>
           </div>
         </div>
       </div>
