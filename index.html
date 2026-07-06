@@ -18,6 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+
 </head>
 <body>
 
@@ -30,40 +31,42 @@
         <p class="landing-subtitle">Master the AI agent runtime - tools, sandboxing, workflows, guardrails, and more. Write and run real Python code directly in your browser.</p>
       </div>
       <code class="install-banner">pip install agentu</code>
-      <div class="feature-grid">
-        <div class="feature-card" data-lesson="0"><h3>Agent + Tools</h3><p>Create agents, attach tools, execute with type-safe schemas.</p></div>
-        <div class="feature-card" data-lesson="1"><h3>Permissions</h3><p>READONLY / WRITE / DANGEROUS access control for tools.</p></div>
-        <div class="feature-card" data-lesson="2"><h3>Memory</h3><p>SQLite-backed remember/recall with importance-weighted search.</p></div>
-        <div class="feature-card" data-lesson="3"><h3>Caching</h3><p>SHA-256 exact match, semantic, offline, and distributed presets.</p></div>
-        <div class="feature-card" data-lesson="4"><h3>Guardrails</h3><p>NoPII, NoHallucination with automatic self-correction.</p></div>
-        <div class="feature-card" data-lesson="5"><h3>Workflows</h3><p>Sequential, parallel, fan-out/fan-in with operator chaining.</p></div>
-        <div class="feature-card" data-lesson="6"><h3>Evaluation</h3><p>Test suites, validators, accuracy metrics, LLM-as-judge.</p></div>
-        <div class="feature-card" data-lesson="7"><h3>Observability</h3><p>Auto-tracked events, metrics, and full execution traces.</p></div>
-        <div class="feature-card" data-lesson="8"><h3>Sandbox</h3><p>Separate read/write tool buckets with least-privilege defaults.</p></div>
-        <div class="feature-card" data-lesson="9"><h3>Sessions</h3><p>Multi-turn stateful conversations with isolated contexts.</p></div>
-        <div class="feature-card" data-lesson="10"><h3>Skills</h3><p>Progressive-load domain expertise. 3-level context optimization.</p></div>
-        <div class="feature-card" data-lesson="11"><h3>LLM Inference</h3><p>Route queries through Ollama, OpenAI, or Anthropic.</p></div>
-        <div class="feature-card" data-lesson="12"><h3>MCP</h3><p>Discover and use tools from external Model Context Protocol servers.</p></div>
-        <div class="feature-card" data-lesson="13"><h3>REST API</h3><p>Serve agents via HTTP, WebSocket, and SSE with one call.</p></div>
-        <div class="feature-card" data-lesson="14"><h3>Rules</h3><p>Feedforward AGENTS.md rules prepended to every LLM call.</p></div>
-        <div class="feature-card" data-lesson="15"><h3>Middleware</h3><p>CostTracker, Logger, Retry - composable processing pipeline.</p></div>
-        <div class="feature-card" data-lesson="16"><h3>Hooks</h3><p>Pre/post-tool callbacks with ALLOW, DENY, and MODIFY actions.</p></div>
-        <div class="feature-card" data-lesson="17"><h3>Structured Output</h3><p>Typed, validated responses with Pydantic-style schemas.</p></div>
-        <div class="feature-card" data-lesson="18"><h3>Code Mode</h3><p>LLM writes Python that chains tool calls in one shot.</p></div>
-        <div class="feature-card" data-lesson="19"><h3>Multi-modal</h3><p>Send images alongside text for vision-capable models.</p></div>
-        <div class="feature-card" data-lesson="20"><h3>Context Mgmt</h3><p>Tiered compaction prevents context window overflow.</p></div>
-        <div class="feature-card" data-lesson="21"><h3>Ralph Mode</h3><p>Autonomous loops with progress tracking and checkpoints.</p></div>
-        <div class="feature-card" data-lesson="22"><h3>Schedules</h3><p>Interval and cron automations with SQLite-persisted findings.</p></div>
-        <div class="feature-card" data-lesson="23"><h3>Sub-agents</h3><p>Maker-checker patterns, judge panels, and best-of-N.</p></div>
-        <div class="feature-card" data-lesson="24"><h3>Worktrees</h3><p>Git worktree isolation for parallel code-editing agents.</p></div>
-        <div class="feature-card" data-lesson="25"><h3>Safety</h3><p>Lethal trifecta detection and untrusted content spotlighting.</p></div>
-        <div class="feature-card" data-lesson="26"><h3>Tool Search</h3><p>Deferred tools discovered on-demand from hundreds of tools.</p></div>
-        <div class="feature-card" data-lesson="27"><h3>Declarative</h3><p>Deploy agents from YAML/JSON config with zero code.</p></div>
-        <div class="feature-card" data-lesson="28"><h3>Rationale</h3><p>Record architectural decisions with searchable audit trails.</p></div>
-        <div class="feature-card" data-lesson="29"><h3>Checkpoints</h3><p>Session checkpoint, fork, and resume for crash recovery.</p></div>
-        <div class="feature-card" data-lesson="30"><h3>OpenTelemetry</h3><p>GenAI semantic convention spans for production tracing.</p></div>
-        <div class="feature-card" data-lesson="31"><h3>Task Queue</h3><p>Background tasks with concurrency control and TTL expiry.</p></div>
-        <div class="feature-card" data-lesson="32"><h3>Storage</h3><p>Pluggable backends — SQLite, Redis, LanceDB, custom.</p></div>
+      <div class="feature-pills">
+        <span class="pill" data-lesson="0">Agent + Tools</span>
+        <span class="pill" data-lesson="1">Permissions</span>
+        <span class="pill" data-lesson="2">Memory</span>
+        <span class="pill" data-lesson="3">Caching</span>
+        <span class="pill" data-lesson="4">Guardrails</span>
+        <span class="pill" data-lesson="5">Workflows</span>
+        <span class="pill" data-lesson="6">Evaluation</span>
+        <span class="pill" data-lesson="7">Observability</span>
+        <span class="pill" data-lesson="8">Sandbox</span>
+        <span class="pill" data-lesson="9">Sessions</span>
+        <span class="pill" data-lesson="10">Skills</span>
+        <span class="pill" data-lesson="11">LLM Inference</span>
+        <span class="pill" data-lesson="12">MCP</span>
+        <span class="pill" data-lesson="13">REST API</span>
+        <span class="pill" data-lesson="14">Rules</span>
+        <span class="pill" data-lesson="15">Middleware</span>
+        <span class="pill" data-lesson="16">Hooks</span>
+        <span class="pill" data-lesson="17">Structured Output</span>
+        <span class="pill" data-lesson="18">Code Mode</span>
+        <span class="pill" data-lesson="19">Multi-modal</span>
+        <span class="pill" data-lesson="20">Context Mgmt</span>
+        <span class="pill" data-lesson="21">Ralph Mode</span>
+        <span class="pill" data-lesson="22">Schedules</span>
+        <span class="pill" data-lesson="23">Sub-agents</span>
+        <span class="pill" data-lesson="24">Worktrees</span>
+        <span class="pill" data-lesson="25">Safety</span>
+        <span class="pill" data-lesson="26">Tool Search</span>
+        <span class="pill" data-lesson="27">Declarative</span>
+        <span class="pill" data-lesson="28">Rationale</span>
+        <span class="pill" data-lesson="29">Checkpoints</span>
+        <span class="pill" data-lesson="30">OpenTelemetry</span>
+        <span class="pill" data-lesson="31">Task Queue</span>
+        <span class="pill" data-lesson="32">Storage</span>
+        <span class="pill" data-lesson="33">Loop Engineering</span>
+        <span class="pill pill-capstone" data-lesson="34">★ Capstone</span>
       </div>
 
       <div class="landing-cta-row">

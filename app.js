@@ -415,11 +415,10 @@ if (startBtn) {
   startBtn.addEventListener("click", () => launchCodelab(0));
 }
 
-// Feature cards → jump to specific lesson
-document.querySelectorAll(".feature-card[data-lesson]").forEach((card) => {
-  card.style.cursor = "pointer";
-  card.addEventListener("click", () => {
-    const idx = parseInt(card.dataset.lesson, 10);
+// Feature pills → jump to specific lesson
+document.querySelectorAll(".pill[data-lesson]").forEach((pill) => {
+  pill.addEventListener("click", () => {
+    const idx = parseInt(pill.dataset.lesson, 10);
     launchCodelab(idx);
   });
 });
