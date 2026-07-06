@@ -383,7 +383,8 @@ body {
   inset: 0;
   background: var(--bg);
   z-index: 1000;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition: opacity 0.5s, transform 0.5s;
 }
 .landing.hidden {
@@ -392,18 +393,15 @@ body {
   pointer-events: none;
 }
 
-/* Three-zone flex column, vertically centered */
 .landing-inner {
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  gap: 2.5vh;
-  padding: 32px;
+  gap: 2rem;
+  padding: 3rem 2rem 4rem;
   box-sizing: border-box;
 }
 
@@ -461,16 +459,16 @@ body {
 /* Zone 2: Feature grid - the hero */
 .feature-grid {
   width: 100%;
-  max-width: 1100px;
+  max-width: 960px;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 .feature-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   cursor: pointer;
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
 }
@@ -480,16 +478,16 @@ body {
   box-shadow: 0 4px 16px rgba(45, 212, 191, 0.08);
 }
 .feature-card h3 {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .feature-card p {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 400;
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 /* Zone 3: CTA */
@@ -689,7 +687,7 @@ body {
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
-  .feature-grid { grid-template-columns: repeat(4, 1fr); }
+  .feature-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 768px) {
