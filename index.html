@@ -25,53 +25,87 @@
   <!-- Landing page -->
   <div class="landing" id="landing">
     <div class="landing-inner">
-      <div class="landing-header">
-        <div class="landing-badge">interactive codelab</div>
-        <h1 class="landing-title">Learn <span class="gradient-text">agentu</span> by doing</h1>
-        <p class="landing-subtitle">Master the AI agent runtime - tools, sandboxing, workflows, guardrails, and more. Write and run real Python code directly in your browser.</p>
-      </div>
-      <code class="install-banner">pip install agentu</code>
-      <div class="feature-pills">
-        <span class="pill" data-lesson="0">Agent + Tools</span>
-        <span class="pill" data-lesson="1">Permissions</span>
-        <span class="pill" data-lesson="2">Memory</span>
-        <span class="pill" data-lesson="3">Caching</span>
-        <span class="pill" data-lesson="4">Guardrails</span>
-        <span class="pill" data-lesson="5">Workflows</span>
-        <span class="pill" data-lesson="6">Evaluation</span>
-        <span class="pill" data-lesson="7">Observability</span>
-        <span class="pill" data-lesson="8">Sandbox</span>
-        <span class="pill" data-lesson="9">Sessions</span>
-        <span class="pill" data-lesson="10">Skills</span>
-        <span class="pill" data-lesson="11">LLM Inference</span>
-        <span class="pill" data-lesson="12">MCP</span>
-        <span class="pill" data-lesson="13">REST API</span>
-        <span class="pill" data-lesson="14">Rules</span>
-        <span class="pill" data-lesson="15">Middleware</span>
-        <span class="pill" data-lesson="16">Hooks</span>
-        <span class="pill" data-lesson="17">Structured Output</span>
-        <span class="pill" data-lesson="18">Code Mode</span>
-        <span class="pill" data-lesson="19">Multi-modal</span>
-        <span class="pill" data-lesson="20">Context Mgmt</span>
-        <span class="pill" data-lesson="21">Ralph Mode</span>
-        <span class="pill" data-lesson="22">Schedules</span>
-        <span class="pill" data-lesson="23">Sub-agents</span>
-        <span class="pill" data-lesson="24">Worktrees</span>
-        <span class="pill" data-lesson="25">Safety</span>
-        <span class="pill" data-lesson="26">Tool Search</span>
-        <span class="pill" data-lesson="27">Declarative</span>
-        <span class="pill" data-lesson="28">Rationale</span>
-        <span class="pill" data-lesson="29">Checkpoints</span>
-        <span class="pill" data-lesson="30">OpenTelemetry</span>
-        <span class="pill" data-lesson="31">Task Queue</span>
-        <span class="pill" data-lesson="32">Storage</span>
-        <span class="pill" data-lesson="33">Loop Engineering</span>
-        <span class="pill pill-capstone" data-lesson="34">★ Capstone</span>
+      <!-- Left column: hero -->
+      <div class="landing-hero">
+        <div class="landing-header">
+          <div class="landing-badge">interactive codelab</div>
+          <h1 class="landing-title">Learn <span class="gradient-text">agentu</span> by doing</h1>
+          <p class="landing-subtitle">Master the AI agent runtime — tools, sandboxing, workflows, guardrails, and more. Write and run real Python code directly in your browser.</p>
+        </div>
+        <code class="install-banner">pip install agentu</code>
+        <div class="landing-cta-row">
+          <button class="landing-cta" id="start-codelab">Start learning</button>
+          <span class="landing-meta">35 lessons &middot; ~2 hours &middot; zero setup</span>
+        </div>
       </div>
 
-      <div class="landing-cta-row">
-        <button class="landing-cta" id="start-codelab">Start learning</button>
-        <span class="landing-meta">35 lessons &middot; ~2 hours &middot; zero setup</span>
+      <!-- Right column: categorized feature map -->
+      <div class="landing-features">
+        <div class="pill-group">
+          <div class="pill-group-label">Core</div>
+          <div class="pill-group-items">
+            <span class="pill" data-lesson="0">Agent + Tools</span>
+            <span class="pill" data-lesson="1">Permissions</span>
+            <span class="pill" data-lesson="8">Sandbox</span>
+            <span class="pill" data-lesson="11">LLM Inference</span>
+            <span class="pill" data-lesson="18">Code Mode</span>
+            <span class="pill" data-lesson="17">Structured Output</span>
+            <span class="pill" data-lesson="19">Multi-modal</span>
+          </div>
+        </div>
+        <div class="pill-group">
+          <div class="pill-group-label">State &amp; Memory</div>
+          <div class="pill-group-items">
+            <span class="pill" data-lesson="2">Memory</span>
+            <span class="pill" data-lesson="3">Caching</span>
+            <span class="pill" data-lesson="9">Sessions</span>
+            <span class="pill" data-lesson="20">Context Mgmt</span>
+            <span class="pill" data-lesson="29">Checkpoints</span>
+            <span class="pill" data-lesson="32">Storage</span>
+          </div>
+        </div>
+        <div class="pill-group">
+          <div class="pill-group-label">Control &amp; Safety</div>
+          <div class="pill-group-items">
+            <span class="pill" data-lesson="4">Guardrails</span>
+            <span class="pill" data-lesson="14">Rules</span>
+            <span class="pill" data-lesson="16">Hooks</span>
+            <span class="pill" data-lesson="15">Middleware</span>
+            <span class="pill" data-lesson="25">Safety</span>
+          </div>
+        </div>
+        <div class="pill-group">
+          <div class="pill-group-label">Architecture</div>
+          <div class="pill-group-items">
+            <span class="pill" data-lesson="5">Workflows</span>
+            <span class="pill" data-lesson="23">Sub-agents</span>
+            <span class="pill" data-lesson="10">Skills</span>
+            <span class="pill" data-lesson="12">MCP</span>
+            <span class="pill" data-lesson="26">Tool Search</span>
+            <span class="pill" data-lesson="27">Declarative</span>
+          </div>
+        </div>
+        <div class="pill-group">
+          <div class="pill-group-label">Loop Engineering</div>
+          <div class="pill-group-items">
+            <span class="pill" data-lesson="21">Ralph Mode</span>
+            <span class="pill" data-lesson="22">Schedules</span>
+            <span class="pill" data-lesson="24">Worktrees</span>
+            <span class="pill" data-lesson="31">Task Queue</span>
+            <span class="pill" data-lesson="33">Loop Engineering</span>
+          </div>
+        </div>
+        <div class="pill-group">
+          <div class="pill-group-label">Ops &amp; Debugging</div>
+          <div class="pill-group-items">
+            <span class="pill" data-lesson="6">Evaluation</span>
+            <span class="pill" data-lesson="7">Observability</span>
+            <span class="pill" data-lesson="13">REST API</span>
+            <span class="pill" data-lesson="28">Rationale</span>
+            <span class="pill" data-lesson="30">OpenTelemetry</span>
+            <span class="pill pill-capstone" data-lesson="34">★ Capstone</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
