@@ -2601,7 +2601,147 @@ for key in orders:
   },
 
   // -----------------------------------------------------------------------
-  // Lesson 34: Capstone
+  // Lesson 34: Loop Engineering
+  // -----------------------------------------------------------------------
+  {
+    id: "loop-engineering",
+    title: "Loop engineering",
+    description: `
+**Loop engineering** is designing the system that prompts your agents. Inspired by [Addy Osmani's loop engineering](https://addyosmani.com/blog/loop-engineering/), agentu gives you three primitives for building autonomous loops:
+
+1. **Scheduled Automations** — run agents on a cadence (interval or cron)
+2. **Sub-agents** — split the maker from the checker (delegation + best-of-N)
+3. **Worktree Isolation** — isolate parallel agents with git worktrees
+
+Individually, each is useful. **Combined**, they form a production-grade autonomous loop: an agent runs on a schedule, delegates sub-tasks to maker/checker pairs, each working in its own isolated worktree.
+    `.trim(),
+    starterCode: `from agentu import Agent, Scheduler, SubAgentConfig, WorktreeManager
+
+# === 1. Define tools ===
+def scan_ci(pipeline: str) -> str:
+    """Check CI pipeline status."""
+    return f"CI {pipeline}: 2 failures (test_auth, test_db)"
+
+def check_issues(repo: str) -> str:
+    """Check open issues."""
+    return f"3 open issues in {repo}: #101 (critical), #102 (low), #103 (medium)"
+
+# === 2. Build the loop-engineered agent ===
+agent = (
+    Agent("ops-bot")
+    .with_tools([scan_ci, check_issues])
+    .with_mock_responses([
+        "Found CI failures and open issues. Delegating fixes...",
+        "Fix for test_auth: update token validation",
+        "Review: APPROVED - fix is correct",
+        "All tasks completed.",
+    ])
+    .with_subagents([
+        {"name": "fixer", "instructions": "Fix failing tests.", "role": "maker"},
+        {"name": "reviewer", "instructions": "Review fixes for correctness.", "role": "checker"},
+    ])
+    .with_worktree()
+    .with_schedule(every="60m", prompt="Triage CI failures and fix issues")
+)
+
+# === 3. Run the loop ===
+print("=== Loop Engineering: Combined Agent ===")
+print(f"Agent: {agent.name}")
+print(f"Tools: {[t['name'] for t in agent.list_tools()]}")
+print(f"Worktree: {agent._worktree.worktree_id}")
+print(f"Schedule: every {agent._schedule_config.every}")
+
+# Simulate a scheduled run
+scheduler = Scheduler(agent)
+await scheduler.start()
+
+# Check what the scheduled run found
+findings = scheduler.findings()
+print(f"\\nFindings from run: {len(findings)}")
+for f in findings:
+    print(f"  [{f.severity}] {f.content[:60]}...")
+
+# Delegate a sub-task with maker-checker
+result = await agent.delegate("Fix the test_auth failure")
+print(f"\\nDelegation result:")
+print(f"  Approved: {result['approved']}")
+print(f"  Review: {result['review'][:60]}...")
+
+# Run autonomous ralph loop for complex work
+ralph_result = await agent.ralph(
+    prompt="Fix all CI failures and close related issues",
+    max_iterations=5,
+)
+print(f"\\nRalph loop: {ralph_result['iterations']} iterations, stopped by {ralph_result['stopped_by']}")
+`,
+    exercise: `**Exercise:** Build an autonomous DevOps loop that: (1) runs on a cron schedule to scan for issues, (2) delegates critical issues to maker/checker sub-agents, (3) uses worktree isolation. Print a summary of findings, delegation results, and the ralph loop outcome.`,
+    hint: "Chain `.with_schedule()`, `.with_subagents()`, and `.with_worktree()` on a single agent. Use `Scheduler(agent)` to run, `agent.delegate()` for sub-tasks, and `agent.ralph()` for autonomous work.",
+    solution: `from agentu import Agent, Scheduler, WorktreeManager
+
+# Tools for the loop
+def scan_ci(pipeline: str) -> str:
+    return f"CI {pipeline}: 1 failure (test_payments)"
+
+def check_issues(repo: str) -> str:
+    return f"2 open issues in {repo}"
+
+def deploy(env: str) -> str:
+    return f"Deployed to {env} successfully"
+
+# Full loop-engineered agent
+agent = (
+    Agent("devops")
+    .with_tools([scan_ci, check_issues, deploy])
+    .with_mock_responses([
+        "Scanning CI and issues...",
+        "Fixed test_payments: updated stripe mock",
+        "Review: APPROVED - fix looks good",
+        "Deploying fix to staging...",
+        "All tasks done!",
+    ])
+    .with_subagents([
+        {"name": "dev", "instructions": "Fix bugs.", "role": "maker"},
+        {"name": "qa", "instructions": "Verify fixes.", "role": "checker"},
+    ])
+    .with_worktree()
+    .with_schedule(cron="0 9 * * 1-5", prompt="Daily CI triage")
+)
+
+# 1. Scheduled run
+scheduler = Scheduler(agent)
+await scheduler.start()
+print(f"=== Scheduled Run ===")
+for f in scheduler.findings():
+    print(f"  {f.content[:70]}...")
+
+# 2. Delegate critical fix
+print(f"\\n=== Maker-Checker Delegation ===")
+fix = await agent.delegate("Fix test_payments failure", judges=2)
+print(f"  Approved: {fix['approved']}")
+print(f"  Judges: {len(fix['judgments'])}")
+
+# 3. Autonomous loop for remaining work
+print(f"\\n=== Ralph Autonomous Loop ===")
+result = await agent.ralph(
+    prompt="Fix remaining issues and deploy to staging",
+    max_iterations=5,
+)
+print(f"  Iterations: {result['iterations']}")
+print(f"  Stopped: {result['stopped_by']}")
+print(f"  Checkpoints: {len(result['checkpoints_completed'])}")
+
+# 4. Worktree summary
+print(f"\\n=== Worktree ===")
+print(f"  ID: {agent._worktree.worktree_id}")
+print(f"  Branch: {agent._worktree.branch}")
+print(f"  Active: {agent._worktree.active}")
+
+print(f"\\n✓ Full loop engineering pipeline complete")
+`,
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 35: Capstone
   // -----------------------------------------------------------------------
   {
     id: "capstone",
