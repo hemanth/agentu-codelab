@@ -2013,7 +2013,7 @@ When all three are present, an indirect prompt injection attack can exfiltrate p
 
 agentu detects this automatically with \`check_lethal_trifecta()\` and provides **spotlighting** — wrapping untrusted content in XML delimiters so the LLM treats it as data, not instructions.
     `.trim(),
-    starterCode: `from agentu import Tool, ToolPermission, check_lethal_trifecta, spotlight_untrusted, TrifectaReport
+    starterCode: `from agentu import Tool, ToolPermission, check_lethal_trifecta, spotlight_untrusted
 
 # Define tools with safety annotations
 def read_db(query: str) -> str:
@@ -2037,9 +2037,9 @@ tools = [
 # Check for lethal trifecta
 report = check_lethal_trifecta(tools)
 print(f"Has trifecta: {report.has_trifecta}")
-print(f"Reads private: {report.reads_private}")
-print(f"Ingests untrusted: {report.ingests_untrusted}")
-print(f"Communicates externally: {report.communicates_externally}")
+print(f"Reads private: {report.reads_private_tools}")
+print(f"Ingests untrusted: {report.ingests_untrusted_tools}")
+print(f"Communicates externally: {report.communicates_externally_tools}")
 print(f"\\nRisk: {report.risk_level}, Recommendation: {report.recommendation[:80]}...")
 
 # Spotlighting: wrap untrusted content
@@ -2253,19 +2253,19 @@ agent = Agent("architect", enable_rationale_recording=True)
 
 # Record architectural decisions
 agent.record_rationale(
-    decision="Use asyncio over threading",
+    action="Use asyncio over threading",
     reasoning="Better performance for I/O-bound tasks, simpler error handling, native Python support",
     alternatives=["threading", "multiprocessing"],
 )
 
 agent.record_rationale(
-    decision="SQLite for local storage",
+    action="SQLite for local storage",
     reasoning="Zero-config, embedded, good enough for single-agent workloads",
     alternatives=["PostgreSQL", "Redis"],
 )
 
 agent.record_rationale(
-    decision="JSON over Protobuf for API",
+    action="JSON over Protobuf for API",
     reasoning="Human-readable, easier debugging, acceptable performance for our scale",
     alternatives=["Protobuf", "MessagePack"],
 )
@@ -2285,23 +2285,23 @@ for d in storage:
     print(f"  • {d['content']}")
 `,
     exercise: `**Exercise:** Record 3 rationale entries about a technology stack choice (frontend framework, database, hosting). Then search for the database decision specifically.`,
-    hint: "Use `agent.record_rationale(decision=..., reasoning=..., alternatives=[...])` for each decision.",
+    hint: "Use `agent.record_rationale(action=..., reasoning=..., alternatives=[...])` for each decision.",
     solution: `from agentu import Agent
 
 agent = Agent("architect", enable_rationale_recording=True)
 
 agent.record_rationale(
-    decision="React for frontend",
+    action="React for frontend",
     reasoning="Largest ecosystem, team expertise",
     alternatives=["Vue", "Svelte"]
 )
 agent.record_rationale(
-    decision="PostgreSQL for database",
+    action="PostgreSQL for database",
     reasoning="Relational data model, strong consistency",
     alternatives=["MongoDB", "MySQL"]
 )
 agent.record_rationale(
-    decision="Vercel for hosting",
+    action="Vercel for hosting",
     reasoning="Zero-config deploys, edge network",
     alternatives=["AWS", "Cloudflare"]
 )
@@ -2870,7 +2870,7 @@ agent.with_subagents([
 ])
 
 agent.record_rationale(
-    decision="Cache → API → Worker restart order",
+    action="Cache → API → Worker restart order",
     reasoning="Cache must be warm before API serves, workers depend on API",
     alternatives=["Parallel restart", "API first"]
 )

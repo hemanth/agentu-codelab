@@ -38,7 +38,7 @@ class Tool:
     func: Callable
     name: str = ""
     description: str = ""
-    permission: ToolPermission = ToolPermission.READONLY
+    permission: ToolPermission = ToolPermission.WRITE
     reads_private: bool = False
     ingests_untrusted: bool = False
     communicates_externally: bool = False
@@ -330,15 +330,15 @@ class Agent:
             return f"Rationale recorded: {rationale[:60]}..."
         self._tools["record_rationale"] = Tool(func=record_rationale)
 
-    def record_rationale(self, decision: str, reasoning: str = "", alternatives: list = None):
+    def record_rationale(self, action: str, reasoning: str = "", alternatives: list = None):
         """Record a rationale entry directly."""
-        entry = f"[rationale] Decision: {decision}"
+        entry = f"[rationale] Action: {action}"
         if reasoning:
             entry += f" | Reasoning: {reasoning}"
         if alternatives:
             entry += f" | Alternatives: {', '.join(alternatives)}"
         self._memory.remember(entry, importance=0.8)
-        self._observer.log("rationale_recorded", {"decision": decision[:60]})
+        self._observer.log("rationale_recorded", {"action": action[:60]})
 
     def with_codemode(self):
         """Enable code generation mode."""
@@ -454,16 +454,18 @@ class Agent:
                 result = await result
             self._observer.log("tool_result", {"tool": tool_name, "success": True})
 
-            # Post-tool hook — call with (tool_name, result) or (tool_name, result, context)
+            # Post-tool hook — call with (tool_name, params, result) or (tool_name, result)
             if self._hooks.get("post_tool"):
                 post_fn = self._hooks["post_tool"]
                 post_sig = inspect.signature(post_fn)
                 if len(post_sig.parameters) >= 3:
-                    post_result = post_fn(tool_name, result, {"agent": self.name})
+                    post_result = post_fn(tool_name, params, result)
                 else:
                     post_result = post_fn(tool_name, result)
                 if asyncio.iscoroutine(post_result):
-                    await post_result
+                    post_result = await post_result
+                if post_result is not None:
+                    result = post_result
 
             return result
         except Exception as e:
@@ -1154,20 +1156,16 @@ def build_content_parts(text: str, images: list[str] = None) -> list[dict]:
 @dataclass
 class TrifectaReport:
     """Report from lethal trifecta safety check."""
-    is_safe: bool
-    reads_private: list[str] = field(default_factory=list)
-    ingests_untrusted: list[str] = field(default_factory=list)
-    communicates_externally: list[str] = field(default_factory=list)
+    has_trifecta: bool = False
+    reads_private_tools: list[str] = field(default_factory=list)
+    ingests_untrusted_tools: list[str] = field(default_factory=list)
+    communicates_externally_tools: list[str] = field(default_factory=list)
+    message: str = ""
     risk_level: str = "low"
     recommendation: str = ""
 
-    @property
-    def has_trifecta(self) -> bool:
-        """True if all three trifecta flags are present."""
-        return bool(self.reads_private) and bool(self.ingests_untrusted) and bool(self.communicates_externally)
-
     def __repr__(self):
-        return f"TrifectaReport(safe={self.is_safe}, risk={self.risk_level}, has_trifecta={self.has_trifecta}, flags=[R:{len(self.reads_private)}, I:{len(self.ingests_untrusted)}, C:{len(self.communicates_externally)}])"
+        return f"TrifectaReport(has_trifecta={self.has_trifecta}, risk={self.risk_level}, flags=[R:{len(self.reads_private_tools)}, I:{len(self.ingests_untrusted_tools)}, C:{len(self.communicates_externally_tools)}])"
 
 
 def check_lethal_trifecta(tools: list[Tool]) -> TrifectaReport:
@@ -1179,30 +1177,36 @@ def check_lethal_trifecta(tools: list[Tool]) -> TrifectaReport:
     communicates = [t.name for t in tools if t.communicates_externally]
 
     flags = sum([bool(reads), bool(ingests), bool(communicates)])
+    has = flags == 3
 
     if flags == 3:
         risk = "critical"
-        safe = False
-        rec = ("DANGEROUS: All three trifecta flags present. An attacker could read private data "
-               "via untrusted input and exfiltrate it externally. Remove or sandbox at least one capability.")
+        msg = ("LETHAL TRIFECTA detected — this agent's tool-set combines "
+               f"private-data access ({', '.join(reads)}), "
+               f"untrusted input ({', '.join(ingests)}), and "
+               f"external communication ({', '.join(communicates)}). "
+               "An indirect-prompt-injection attack could exfiltrate private data. "
+               "Consider splitting these capabilities across separate agents.")
+        rec = msg
     elif flags == 2:
         risk = "high"
-        safe = False
-        rec = "Two of three trifecta flags present. Review tool permissions carefully."
+        msg = "Two of three trifecta flags present. Review tool permissions carefully."
+        rec = msg
     elif flags == 1:
         risk = "medium"
-        safe = True
-        rec = "One trifecta flag present. Generally safe but monitor usage."
+        msg = "One trifecta flag present. Generally safe but monitor usage."
+        rec = msg
     else:
         risk = "low"
-        safe = True
-        rec = "No trifecta flags detected. Tool set appears safe."
+        msg = "No trifecta flags detected. Tool set appears safe."
+        rec = msg
 
     return TrifectaReport(
-        is_safe=safe,
-        reads_private=reads,
-        ingests_untrusted=ingests,
-        communicates_externally=communicates,
+        has_trifecta=has,
+        reads_private_tools=reads,
+        ingests_untrusted_tools=ingests,
+        communicates_externally_tools=communicates,
+        message=msg,
         risk_level=risk,
         recommendation=rec,
     )
