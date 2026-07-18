@@ -166,40 +166,45 @@ print(f"[ok] delete_all (allowed): {result}")
     description: `
 Agents can remember things across interactions using \`.remember()\` and \`.recall()\`.
 
-Memory is SQLite-backed, searchable, and sorted by importance.
+Memory is SQLite-backed, searchable, and sorted by importance. By default, the LLM **auto-extracts** structured metadata (entities, topics, summary, importance) from anything you remember.
 
-- \`agent.remember(content, importance=0.9)\` - store a fact
+- \`agent.remember(content)\` - store a fact (LLM extracts metadata)
 - \`agent.recall(query)\` - search memories by keyword
-- Importance (0.0–1.0) determines recall priority
+- Conversation-type memories skip extraction automatically
+- Pass \`entities=\`, \`topics=\` manually to skip the LLM call
     `.trim(),
     starterCode: `from agentu import Agent
 
 agent = Agent("assistant")
 
-# Store some memories with different importance
+# The LLM auto-extracts entities, topics, summary, and importance
 agent.remember("Customer prefers email communication", importance=0.9)
 agent.remember("Last order was #1042 for a blue mug", importance=0.7)
 agent.remember("Customer timezone is PST", importance=0.5)
 agent.remember("Customer birthday is March 15", importance=0.3)
+
+# New in 2.3: raw text → LLM extracts structured metadata
+agent.remember("Acme Corp signed a $2M deal with BigTech for cloud services")
+# → entities: ["Acme Corp", "BigTech"], topics: ["deals", "cloud"]
+
+# Manual override — skips the LLM call
+agent.remember("Board meeting Tuesday", entities=["Board"], topics=["meetings"])
 
 # Recall by keyword
 print("=== Communication preferences ===")
 memories = agent.recall("communication")
 for m in memories:
     print(f"  [{m['importance']}] {m['content']}")
-
-print("\\n=== Order history ===")
-memories = agent.recall("order")
-for m in memories:
-    print(f"  [{m['importance']}] {m['content']}")
+    if m.get('entities'):
+        print(f"    entities: {m['entities']}")
 
 print("\\n=== All memories (by importance) ===")
 memories = agent.recall()
 for m in memories:
     print(f"  [{m['importance']}] {m['content']}")
 `,
-    exercise: `**Exercise:** Build a personal assistant that remembers meeting notes. Store 5 different meeting summaries with varying importance, then recall only the high-priority ones (importance > 0.7).`,
-    hint: "You can filter in Python after recall: `[m for m in agent.recall() if m['importance'] > 0.7]`",
+    exercise: `**Exercise:** Build a personal assistant that remembers meeting notes. Store 5 different meeting summaries with varying importance, then recall only the high-priority ones (importance > 0.7). Check if the auto-extracted entities look correct.`,
+    hint: "You can filter in Python after recall: `[m for m in agent.recall() if m['importance'] > 0.7]`. Check `m['entities']` and `m['topics']` on each memory.",
     solution: `from agentu import Agent
 
 agent = Agent("meeting-bot")
@@ -215,6 +220,8 @@ all_memories = agent.recall()
 important = [m for m in all_memories if m["importance"] > 0.7]
 for m in important:
     print(f"  * [{m['importance']}] {m['content']}")
+    if m.get('entities'):
+        print(f"    entities: {m['entities']}")
 
 print(f"\\n{len(important)} high-priority out of {len(all_memories)} total")
 `,
@@ -2881,6 +2888,126 @@ print(f"  Schedule: every 60 min")
 print(f"  Sub-agents: {len(agent._subagent_configs)}")
 decisions = agent.recall("rationale")
 print(f"  Decisions: {len(decisions)}")
+`,
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 34: Always-On Memory
+  // -----------------------------------------------------------------------
+  {
+    id: "always-on-memory",
+    title: "Always-on memory",
+    description: `
+Build agents with **persistent, evolving memory** that runs 24/7.
+
+Inspired by [Google's always-on-memory-agent](https://github.com/GoogleCloudPlatform/generative-ai/tree/main/gemini/agents/always-on-memory-agent), agentu supports three memory patterns:
+
+1. **Structured extraction** — the LLM auto-extracts entities, topics, summary from any \`remember()\` call
+2. **Background consolidation** — periodic review that finds patterns across memories (like the brain during sleep)
+3. **Inbox file watcher** — drop files in a folder, the agent ingests them automatically
+
+No vector database. No embeddings. Just an LLM that reads, thinks, and writes structured memory.
+    `.trim(),
+    starterCode: `from agentu import Agent
+import os
+
+# === 1. Structured Extraction ===
+# Just pass raw text — the LLM extracts entities, topics, summary, importance
+agent = Agent("researcher")
+
+agent.remember("Anthropic reports 62% of Claude usage is code-related")
+# → entities: ["Anthropic", "Claude"], topics: ["AI", "code"], importance: 0.8
+
+agent.remember("Google released Gemini 3.1 Flash-Lite for always-on agents")
+# → entities: ["Google", "Gemini"], topics: ["AI", "agents"]
+
+# Conversation turns skip extraction (no point tagging chat)
+agent.remember("user said hello", memory_type="conversation")
+
+# Manual override — skips the LLM call
+agent.remember("Custom data", entities=["Acme"], topics=["business"])
+
+print("=== Memories ===")
+for m in agent.recall():
+    print(f"  {m['content'][:50]}...")
+    print(f"    entities: {m.get('entities', [])}, topics: {m.get('topics', [])}")
+
+# === 2. Background Consolidation ===
+# Like the brain during sleep — reviews memories on a timer
+agent.with_consolidation(every=30)  # every 30 minutes
+
+# The consolidate_memories tool is now available to the LLM
+tool_names = [t.name for t in agent.list_tools()]
+print(f"\\nTools (includes consolidation): {tool_names}")
+
+# In production, the timer triggers automatically.
+# Here we call the tool directly:
+tool = next(t for t in agent._tools.values() if t.name == "consolidate_memories")
+result = tool.function(
+    insight="AI companies are competing on coding capabilities",
+    related_topics=["AI", "code", "competition"],
+    source_summaries=["Claude code usage", "Gemini for agents"],
+)
+print(f"\\nConsolidation: {result['status']}")
+print(f"Insight: {result['insight']}")
+
+# === 3. Inbox File Watcher ===
+# Drop files → agent processes them → stored as memory
+inbox = "/tmp/agentu-inbox-demo"
+os.makedirs(inbox, exist_ok=True)
+agent.with_inbox(inbox)
+print(f"\\nInbox watching: {agent._inbox_path}")
+print("Drop files here → agent ingests them → moved to .processed/")
+`,
+    exercise: `**Exercise:** Build a knowledge base agent that:
+1. Remembers 5 facts about different companies
+2. Enables consolidation (every 60 min)
+3. Calls the consolidation tool to find a cross-cutting insight
+4. Sets up an inbox at \`/tmp/kb-inbox\`
+
+Verify the consolidated insight appears in \`agent.recall(memory_type="consolidation")\`.`,
+    hint: "After calling `consolidate_memories(...)`, recall with `memory_type='consolidation'` to find the stored insight. The tool stores it as a high-importance memory.",
+    solution: `from agentu import Agent
+import os
+
+agent = Agent("knowledge-base")
+
+# 1. Store facts
+agent.remember("Apple's Vision Pro uses M2 chip for spatial computing")
+agent.remember("Google's Gemini supports 1M token context windows")
+agent.remember("Meta released Llama 3 as open-source")
+agent.remember("Microsoft invested $10B in OpenAI")
+agent.remember("Anthropic raised $4B from Amazon for Claude development")
+
+print(f"Stored {len(agent.recall())} memories")
+
+# 2. Enable consolidation
+agent.with_consolidation(every=60)
+
+# 3. Run consolidation
+tool = next(t for t in agent._tools.values() if t.name == "consolidate_memories")
+result = tool.function(
+    insight="Big tech is racing to dominate AI through massive investment and model releases",
+    related_topics=["AI", "investment", "competition", "big tech"],
+    source_summaries=[
+        "Apple Vision Pro", "Google Gemini", "Meta Llama",
+        "Microsoft OpenAI", "Anthropic Amazon"
+    ],
+)
+print(f"Consolidated: {result['insight']}")
+
+# 4. Verify insight is stored
+insights = agent.recall(memory_type="consolidation")
+print(f"\\nStored insights: {len(insights)}")
+for m in insights:
+    print(f"  * {m['content']}")
+
+# 5. Set up inbox
+inbox = "/tmp/kb-inbox"
+os.makedirs(inbox, exist_ok=True)
+agent.with_inbox(inbox)
+print(f"\\nInbox: {agent._inbox_path}")
+print("\\n✓ Knowledge base agent configured!")
 `,
   },
 ];
