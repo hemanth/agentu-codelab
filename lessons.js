@@ -3076,7 +3076,7 @@ print(f"Analysis: {analysis}")
 report = await w_tool.function(task=f"Write report: {analysis}")
 print(f"Report: {report}")
 `,
-    exercise: `**Exercise:** Add a \\`validator\\` agent with a \\`validate\\` tool. After the writer produces a report, call the validator. If validation fails (returns "invalid"), call the researcher again with a refined query, then re-run the pipeline. This is a **loop** — no graph framework needed, just Python.`,
+    exercise: `**Exercise:** Add a `validator` agent with a `validate` tool. After the writer produces a report, call the validator. If validation fails (returns "invalid"), call the researcher again with a refined query, then re-run the pipeline. This is a **loop** — no graph framework needed, just Python.`,
     hint: "Use a simple `for` loop: call researcher → analyst → writer → validator. If validator returns 'invalid', continue the loop. If 'valid', break.",
     solution: `from agentu import Agent, Tool
 
