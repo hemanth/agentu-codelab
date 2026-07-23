@@ -124,14 +124,19 @@ class Memory:
         """)
         self._db.commit()
 
-    def remember(self, content: str, importance: float = 0.5):
+    def remember(self, content: str, importance: float = 0.5,
+                  memory_type: str = "fact", entities: list = None,
+                  topics: list = None, source: str = None,
+                  summary: str = None, consolidated: bool = False, **kwargs):
         self._db.execute(
             "INSERT INTO memories (content, importance) VALUES (?, ?)",
             (content, importance),
         )
         self._db.commit()
 
-    def recall(self, query: str = "", limit: int = 5) -> list[dict]:
+    def recall(self, query: str = "", limit: int = 5,
+               memory_type: str = None, include_short_term: bool = False,
+               **kwargs) -> list[dict]:
         if query:
             rows = self._db.execute(
                 "SELECT content, importance FROM memories WHERE content LIKE ? ORDER BY importance DESC LIMIT ?",
@@ -142,7 +147,7 @@ class Memory:
                 "SELECT content, importance FROM memories ORDER BY importance DESC LIMIT ?",
                 (limit,),
             ).fetchall()
-        return [{"content": r[0], "importance": r[1]} for r in rows]
+        return [{"content": r[0], "importance": r[1], "entities": [], "topics": []} for r in rows]
 
     def clear(self):
         self._db.execute("DELETE FROM memories")
@@ -252,9 +257,16 @@ class MockLLM:
 
 class Agent:
     def __init__(self, name: str, model: str = "mock", codemode: bool = False,
-                 enable_rationale_recording: bool = False, **kwargs):
+                 enable_rationale_recording: bool = False,
+                 enable_memory: bool = False,
+                 auto_extract_memory: bool = True, **kwargs):
         self.name = name
         self.model = model
+        self.memory_enabled = enable_memory
+        self.auto_extract_memory = auto_extract_memory
+        self.system_prompt = kwargs.get("system_prompt", "")
+        self.temperature = kwargs.get("temperature", 1.0)
+        self.context = ""
         self._tools: dict[str, Tool] = {}
         self._memory = Memory()
         self._cache: Cache | None = None
@@ -270,10 +282,13 @@ class Agent:
         self._schedule_config: "ScheduleConfig | None" = None
         self._scheduler: "Scheduler | None" = None
         self._subagent_configs: list = []
+        self._child_agents: list = []
         self._worktree: "WorktreeManager | None" = None
         self._otel_config: dict | None = None
         self._backend: Any = None
         self._vectors_path: str | None = None
+        self._inbox_path: str | None = None
+        self._inbox_poll_interval: int = 10
         self._enable_rationale_recording = enable_rationale_recording
         if enable_rationale_recording:
             self._setup_rationale_tool()
@@ -396,16 +411,89 @@ class Agent:
         self._llm = MockLLM(responses)
         return self
 
+    def with_agents(self, agents: list) -> "Agent":
+        """Give this agent access to other agents as callable tools."""
+        import asyncio as _asyncio
+
+        for agent in agents:
+            agent_name = getattr(agent, "name", str(agent))
+            tool_names = ", ".join(t.name for t in agent._tools.values())
+            agent_desc = (
+                getattr(agent, "system_prompt", "") or
+                f"Agent '{agent_name}' with tools: {tool_names}"
+            )
+
+            async def _call_agent(task: str, _agent=agent) -> str:
+                return await _agent.infer(task)
+
+            _call_agent.__name__ = f"call_{agent_name}"
+            _call_agent.__doc__ = (
+                f"Delegate a task to the {agent_name} agent.\n\n"
+                f"{agent_desc}\n\n"
+                f"Args:\n    task: What to ask {agent_name} to do."
+            )
+            tool = Tool(func=_call_agent)
+            self._tools[tool.name] = tool
+
+        self._child_agents.extend(agents)
+        return self
+
+    def with_consolidation(self, every: int = 30) -> "Agent":
+        """Enable background memory consolidation."""
+        def consolidate_memories(insight: str, related_topics: list = None,
+                                  source_summaries: list = None) -> dict:
+            """Consolidate memories into a high-importance insight."""
+            self._memory.remember(
+                f"[consolidated] {insight}",
+                importance=0.95,
+                memory_type="consolidation",
+            )
+            return {"status": "consolidated", "insight": insight}
+
+        tool = Tool(func=consolidate_memories)
+        self._tools[tool.name] = tool
+        return self
+
+    def with_inbox(self, path: str, poll_interval: int = 10) -> "Agent":
+        """Watch a directory for incoming files."""
+        self._inbox_path = path
+        self._inbox_poll_interval = poll_interval
+        return self
+
+    async def _poll_inbox(self):
+        """Poll inbox once (stub for codelab)."""
+        import os
+        if not self._inbox_path:
+            return
+        processed_dir = os.path.join(self._inbox_path, ".processed")
+        os.makedirs(processed_dir, exist_ok=True)
+        for fname in os.listdir(self._inbox_path):
+            fpath = os.path.join(self._inbox_path, fname)
+            if os.path.isfile(fpath):
+                content = open(fpath).read()
+                self._memory.remember(f"[inbox] {fname}: {content[:200]}", importance=0.7)
+                os.rename(fpath, os.path.join(processed_dir, fname))
+
     # -- Memory --
 
-    def remember(self, content: str, importance: float = 0.5):
-        self._memory.remember(content, importance)
+    def remember(self, content: str, importance: float = 0.5,
+                  memory_type: str = "fact", entities: list = None,
+                  topics: list = None, source: str = None,
+                  summary: str = None, **kwargs):
+        self._memory.remember(content, importance, memory_type=memory_type,
+                              entities=entities, topics=topics, source=source)
         self._observer.log("memory_store", {"content": content[:50], "importance": importance})
 
-    def recall(self, query: str = "", limit: int = 5) -> list[dict]:
+    def recall(self, query: str = "", limit: int = 5,
+               memory_type: str = None, include_short_term: bool = False) -> list[dict]:
         results = self._memory.recall(query, limit)
         self._observer.log("memory_recall", {"query": query, "results": len(results)})
         return results
+
+    def get_memory_stats(self) -> dict:
+        """Return memory usage stats."""
+        all_mems = self._memory.recall(limit=1000)
+        return {"short_term_size": 0, "long_term_size": len(all_mems)}
 
     # -- Execution --
 
