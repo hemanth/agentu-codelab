@@ -3020,7 +3020,7 @@ print("\\n✓ Knowledge base agent configured!")
     description: `
 Give an orchestrator agent access to **specialist agents as callable tools**.
 
-\\`agent.with_agents([...])\\` wraps each child agent as a tool named \\`call_{name}\\`. The orchestrator's LLM decides when to call which agent — no graph framework needed.
+\`agent.with_agents([...])\` wraps each child agent as a tool named \`call_{name}\`. The orchestrator's LLM decides when to call which agent — no graph framework needed.
 
 - **Sequential**: LLM calls agents one after another
 - **Parallel**: LLM calls multiple agents in one turn
