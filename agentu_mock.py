@@ -460,17 +460,18 @@ class Agent:
         self._inbox_poll_interval = poll_interval
         return self
 
-    async def with_plugin(self, path: str) -> "Agent":
-        """Load an Agent Plugin (v1.0.0 spec) in mock environment."""
+    async def with_plugins(self, plugins) -> "Agent":
+        """Load one or more Agent Plugins (v1.0.0 spec) in mock environment."""
         self._plugins = getattr(self, "_plugins", [])
-        self._plugins.append(path)
+        if isinstance(plugins, (list, tuple)):
+            self._plugins.extend(plugins)
+        else:
+            self._plugins.append(plugins)
         return self
 
-    async def with_plugins(self, paths: list) -> "Agent":
-        """Load multiple Agent Plugins in mock environment."""
-        for p in paths:
-            await self.with_plugin(p)
-        return self
+    async def with_plugin(self, plugins) -> "Agent":
+        """Alias for `with_plugins()`."""
+        return await self.with_plugins(plugins)
 
     async def _poll_inbox(self):
         """Poll inbox once (stub for codelab)."""

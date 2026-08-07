@@ -3145,7 +3145,7 @@ An Agent Plugin is a single portable directory layout:
 - \`skills/*/SKILL.md\` — Zero-config discovery of Agent Skills
 - \`mcp.json\` — Declarative MCP server configurations
 
-Use \`await agent.with_plugin("./path/to/plugin")\` or \`await agent.with_plugins([...])\` to load portable packages cleanly.
+Use \`await agent.with_plugins("./path/to/plugin")\` or \`await agent.with_plugins([...])\` to load portable packages cleanly.
     `.trim(),
     starterCode: `import tempfile
 import json
@@ -3193,7 +3193,7 @@ print(f"Discovered Skills: {[s.name for s in loader.skills]}")
 print(f"Discovered MCP Config: {loader.mcp_config.name}")
 
 # === 3. Load natively into agent ===
-agent = await Agent("reporter").with_plugin(plugin_dir)
+agent = await Agent("reporter").with_plugins(plugin_dir)
 print(f"\\n✓ Agent '{agent.name}' loaded plugin successfully!")
 `,
     exercise: `**Exercise:** Create a second plugin called \`"data-kit"\` with a skill \`"bigquery-query"\`. Use \`await agent.with_plugins([plugin_dir, plugin2_dir])\` to load both plugins at once into your agent.`,
