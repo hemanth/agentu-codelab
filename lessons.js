@@ -3130,5 +3130,97 @@ else:
     print("\\n✗ Max attempts reached")
 `,
   },
+
+  // -----------------------------------------------------------------------
+  // Lesson 36: Agent Plugins (v1.0.0 Spec)
+  // -----------------------------------------------------------------------
+  {
+    id: "agent-plugins",
+    title: "Agent Plugins (v1.0.0 Spec)",
+    description: `
+Package and load portable skills and MCP servers using the **Agent Plugins 1.0.0 specification** (backed by Google, Amazon, Microsoft, Cursor, OpenAI, Vercel).
+
+An Agent Plugin is a single portable directory layout:
+- \`plugin.json\` — Minimal manifest with \`name\`
+- \`skills/*/SKILL.md\` — Zero-config discovery of Agent Skills
+- \`mcp.json\` — Declarative MCP server configurations
+
+Use \`await agent.with_plugin("./path/to/plugin")\` or \`await agent.with_plugins([...])\` to load portable packages cleanly.
+    `.trim(),
+    starterCode: `import tempfile
+import json
+from pathlib import Path
+from agentu import Agent, PluginLoader
+
+# === 1. Create a sample Agent Plugin package ===
+tmp_dir = Path(tempfile.mkdtemp())
+plugin_dir = tmp_dir / "reports-plugin"
+plugin_dir.mkdir()
+
+# Write manifest plugin.json
+manifest = {
+    "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+    "name": "reports-plugin",
+    "version": "1.0.0",
+    "description": "Generate financial summaries"
+}
+(plugin_dir / "plugin.json").write_text(json.dumps(manifest, indent=2))
+
+# Write a skill in skills/summarize/SKILL.md
+skill_dir = plugin_dir / "skills" / "summarize"
+skill_dir.mkdir(parents=True)
+(skill_dir / "SKILL.md").write_text("""---
+name: summarize-reports
+description: Summarize quarterly financial reports
+---
+# Summarize Skill
+Format financial metrics into Markdown tables.
+""")
+
+# Write MCP config in mcp.json
+(plugin_dir / "mcp.json").write_text(json.dumps({
+    "mcpServers": {
+        "db-server": {"url": "http://localhost:8080/sse"}
+    }
+}))
+
+print(f"Created plugin at: {plugin_dir}")
+
+# === 2. Validate with PluginLoader ===
+loader = PluginLoader(plugin_dir).load()
+print(f"Manifest Name: {loader.manifest['name']}")
+print(f"Discovered Skills: {[s.name for s in loader.skills]}")
+print(f"Discovered MCP Config: {loader.mcp_config.name}")
+
+# === 3. Load natively into agent ===
+agent = await Agent("reporter").with_plugin(plugin_dir)
+print(f"\\n✓ Agent '{agent.name}' loaded plugin successfully!")
+`,
+    exercise: `**Exercise:** Create a second plugin called \`"data-kit"\` with a skill \`"bigquery-query"\`. Use \`await agent.with_plugins([plugin_dir, plugin2_dir])\` to load both plugins at once into your agent.`,
+    hint: "Create another directory with plugin.json (name='data-kit') and skills/bigquery-query/SKILL.md, then pass both directories to with_plugins().",
+    solution: `import tempfile
+import json
+from pathlib import Path
+from agentu import Agent, PluginLoader
+
+# Create plugin 1
+p1 = Path(tempfile.mkdtemp()) / "reports"
+p1.mkdir()
+(p1 / "plugin.json").write_text(json.dumps({"name": "reports"}))
+
+# Create plugin 2
+p2 = Path(tempfile.mkdtemp()) / "data-kit"
+p2.mkdir()
+(p2 / "plugin.json").write_text(json.dumps({"name": "data-kit"}))
+s2 = p2 / "skills" / "bigquery-query"
+s2.mkdir(parents=True)
+(s2 / "SKILL.md").write_text("---\\nname: bigquery-query\\ndescription: Query BigQuery datasets\\n---\\nQuery data.")
+
+# Load both plugins
+agent = await Agent("reporter").with_plugins([p1, p2])
+print(f"✓ Agent '{agent.name}' loaded multiple plugins!")
+print(f"Skills loaded: {[s.name for s in agent.skills]}")
+`,
+  },
 ];
 
