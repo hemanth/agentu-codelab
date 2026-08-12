@@ -286,6 +286,9 @@ class Agent:
         self._worktree: "WorktreeManager | None" = None
         self._otel_config: dict | None = None
         self._backend: Any = None
+        self._durable: bool = False
+        self._durable_dir: str | None = None
+        self._agent_lock: Any = None
         self._vectors_path: str | None = None
         self._inbox_path: str | None = None
         self._inbox_poll_interval: int = 10
@@ -458,6 +461,15 @@ class Agent:
         """Watch a directory for incoming files."""
         self._inbox_path = path
         self._inbox_poll_interval = poll_interval
+        return self
+
+    def with_backend(self, backend=None, durable=False):
+        """Mock with_backend implementation."""
+        if durable:
+            self._durable = True
+            self._durable_dir = "~/.agentu/agents"
+            self._agent_lock = None
+        self._backend = backend
         return self
 
     async def with_plugins(self, plugins) -> "Agent":

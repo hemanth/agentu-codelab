@@ -3222,5 +3222,33 @@ print(f"✓ Agent '{agent.name}' loaded multiple plugins!")
 print(f"Skills loaded: {[s.name for s in agent.skills]}")
 `,
   },
-];
 
+  // -----------------------------------------------------------------------
+  // Lesson 37: Durable Agents
+  // -----------------------------------------------------------------------
+  {
+    id: "durable_agents",
+    title: "Durable Agents",
+    description: `
+**Durable Agents** survive crashes and process restarts using single-writer file locks and SQLite checkpoints.
+When you call \`with_backend(durable=True)\`, the agent ensures only one instance runs at a time.
+    `.trim(),
+    starterCode: `from agentu import Agent
+
+# Create a durable agent that uses file locking and checkpoints
+agent = Agent("durable-worker").with_backend(durable=True)
+
+print(f"Agent name: {agent.name}")
+print(f"Durable mode enabled: {agent._durable}")
+print(f"Durable directory: {agent._durable_dir}")
+`,
+    exercise: `**Exercise:** Create a durable agent using \`with_backend(durable=True)\` and verify that the durable flags are set.`,
+    hint: "Use `.with_backend(durable=True)` to enable durable mode.",
+    solution: `from agentu import Agent
+
+agent = Agent("my-durable-agent").with_backend(durable=True)
+print(f"Durable mode: {agent._durable}")
+print("Agent is now crash-safe!")
+`,
+  }
+];
