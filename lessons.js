@@ -3250,5 +3250,59 @@ agent = Agent("my-durable-agent").with_backend(durable=True)
 print(f"Durable mode: {agent._durable}")
 print("Agent is now crash-safe!")
 `,
+  },
+  // -----------------------------------------------------------------------
+  // Lesson 38: Multimodal Media Engine
+  // -----------------------------------------------------------------------
+  {
+    id: "multimodal_media",
+    title: "Multimodal Media Engine",
+    description: `
+**Multimodal Media Engine** lets you pass a mix of images, video links, audio files, and documents in a unified \`media=[...]\` list.
+
+Features:
+- **Zero-config auto-detection**: Recognizes YouTube, Vimeo, Loom, extensions (\`.png\`, \`.mp4\`, \`.mp3\`, \`.pdf\`), and magic bytes.
+- **Explicit dict support**: Pass custom flags like \`{"type": "video", "url": "...", "processing": "agentic"}\`.
+- **Backward compatible**: \`images=[...]\` continues to work.
+    `.trim(),
+    starterCode: `from agentu import build_content_parts, resolve_media, detect_media_kind
+
+# 1. Auto-detect various media modalities
+print(f"YouTube URL: {detect_media_kind('https://youtu.be/7Z5Vy9JBANs')}")
+print(f"Audio File: {detect_media_kind('https://example.com/podcast.mp3')}")
+print(f"Image File: {detect_media_kind('./diagram.png')}")
+print(f"PDF Doc:    {detect_media_kind('./whitepaper.pdf')}")
+
+# 2. Build mixed content parts
+parts = build_content_parts(
+    "Analyze the keynote and review the slide:",
+    media=[
+        "https://youtu.be/7Z5Vy9JBANs",
+        "https://example.com/slide.png",
+        {"type": "video", "url": "https://example.com/demo.mp4", "processing": "agentic"},
+    ]
+)
+
+print(f"\\nTotal content parts: {len(parts)}")
+for i, p in enumerate(parts):
+    print(f"  Part {i+1}: type={p.get('type')}")
+`,
+    exercise: `**Exercise:** Build content parts for a query with a YouTube video URL, an MP3 audio URL, and a slide PNG image using the unified \`media\` parameter. Print the total count of parts.`,
+    hint: "Pass all three items in a single list: `media=['https://youtu.be/...', 'https://.../a.mp3', 'https://.../s.png']` to `build_content_parts()`.",
+    solution: `from agentu import build_content_parts
+
+parts = build_content_parts(
+    "Synthesize the video, audio transcript, and slide chart",
+    media=[
+        "https://youtu.be/7Z5Vy9JBANs",
+        "https://example.com/recording.mp3",
+        "https://example.com/chart.png",
+    ]
+)
+
+print(f"Total parts: {len(parts)}")
+for p in parts:
+    print(f"  - {p.get('type')}")
+`,
   }
 ];

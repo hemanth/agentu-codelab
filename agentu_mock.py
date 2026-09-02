@@ -585,7 +585,7 @@ class Agent:
             self._observer.log("error", {"tool": tool_name, "error": str(e)})
             raise
 
-    async def infer(self, prompt: str, output_type: Any = None, images: list = None) -> Any:
+    async def infer(self, prompt: str, output_type: Any = None, images: list = None, media: list = None) -> Any:
         """LLM-routed execution (mock in codelab)."""
         # OTel span tracking
         if self._otel_config:
@@ -597,10 +597,10 @@ class Agent:
 
         self._observer.log("inference_start", {"prompt": prompt[:80]})
 
-        # Multi-modal: build content parts if images provided
-        if images:
-            parts = build_content_parts(prompt, images)
-            self._observer.log("multimodal", {"text_parts": 1, "image_parts": len(images)})
+        # Multi-modal: build content parts if media/images provided
+        if images or media:
+            parts = build_content_parts(prompt, images=images, media=media)
+            self._observer.log("multimodal", {"parts": len(parts)})
 
         # Check cache
         if self._cache:
@@ -1218,6 +1218,33 @@ class StructuredOutput:
 # ---------------------------------------------------------------------------
 # Multi-modal Support
 # ---------------------------------------------------------------------------
+# Multi-modal Mock Utilities
+# ---------------------------------------------------------------------------
+
+_VIDEO_DOMAINS = ("youtube.com", "youtu.be", "vimeo.com", "loom.com", "tiktok.com")
+_AUDIO_DOMAINS = ("soundcloud.com", "spotify.com")
+_IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp")
+_AUDIO_EXTS = (".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac", ".opus")
+_VIDEO_EXTS = (".mp4", ".webm", ".mov", ".avi", ".mkv", ".flv", ".m4v")
+
+
+def detect_media_kind(source: str) -> str:
+    """Classify media into 'image', 'audio', 'video', or 'document'."""
+    s = source.lower()
+    if s.startswith("data:video/"):
+        return "video"
+    if s.startswith("data:audio/"):
+        return "audio"
+    if s.startswith("data:application/pdf"):
+        return "document"
+    if any(d in s for d in _VIDEO_DOMAINS) or any(s.endswith(e) for e in _VIDEO_EXTS):
+        return "video"
+    if any(d in s for d in _AUDIO_DOMAINS) or any(s.endswith(e) for e in _AUDIO_EXTS):
+        return "audio"
+    if s.endswith(".pdf"):
+        return "document"
+    return "image"
+
 
 def detect_mime_type(source: str) -> str:
     """Detect MIME type from a file path or URL."""
@@ -1232,33 +1259,65 @@ def detect_mime_type(source: str) -> str:
         return "image/webp"
     elif source_lower.endswith(".svg"):
         return "image/svg+xml"
+    elif source_lower.endswith(".mp4"):
+        return "video/mp4"
+    elif source_lower.endswith(".mp3"):
+        return "audio/mp3"
+    elif source_lower.endswith(".wav"):
+        return "audio/wav"
     elif source_lower.endswith(".pdf"):
         return "application/pdf"
+    elif any(d in source_lower for d in _VIDEO_DOMAINS):
+        return "video/mp4"
     elif source_lower.startswith("data:"):
-        # data URI
         return source.split(";")[0].split(":")[1]
     return "application/octet-stream"
 
 
-def resolve_image(source: str) -> dict:
-    """Resolve an image source to a content part dict."""
+def resolve_media(source: Any) -> dict:
+    """Resolve a media source (URL, dict, file) to a content part dict."""
+    if isinstance(source, dict):
+        t = source.get("type", "")
+        url = source.get("url") or source.get("uri")
+        if t == "video" and url:
+            rest = {k: v for k, v in source.items() if k not in ("type", "url", "uri")}
+            return {"type": "video_url", "video_url": {"url": url, **rest}}
+        if t == "image" and url:
+            rest = {k: v for k, v in source.items() if k not in ("type", "url", "uri")}
+            return {"type": "image_url", "image_url": {"url": url, **rest}}
+        if t == "audio" and url:
+            rest = {k: v for k, v in source.items() if k not in ("type", "url", "uri")}
+            return {"type": "audio_url", "audio_url": {"url": url, **rest}}
+        return source
+
+    kind = detect_media_kind(source)
     mime = detect_mime_type(source)
-    if source.startswith("http://") or source.startswith("https://"):
-        return {"type": "image_url", "url": source, "mime_type": mime}
-    elif source.startswith("data:"):
-        return {"type": "image_data", "data": source, "mime_type": mime}
-    else:
-        # Treat as file path (mock: just reference it)
-        return {"type": "image_file", "path": source, "mime_type": mime}
+    if kind == "video":
+        return {"type": "video_url", "video_url": {"url": source}}
+    elif kind == "audio":
+        return {"type": "audio_url", "audio_url": {"url": source}}
+    elif kind == "document":
+        return {"type": "document", "document": {"url": source, "mime_type": mime}}
+    return {"type": "image_url", "image_url": {"url": source}}
 
 
-def build_content_parts(text: str, images: list[str] = None) -> list[dict]:
-    """Build multi-modal content parts from text and images."""
+def resolve_image(source: str) -> dict:
+    """Resolve an image source to a content part dict (backward compat)."""
+    return resolve_media(source)
+
+
+def build_content_parts(text: str, images: list = None, media: list = None) -> list[dict]:
+    """Build multi-modal content parts from text, images, and media."""
+    all_media = []
+    if images:
+        all_media.extend(images)
+    if media:
+        all_media.extend(media)
+    if not all_media:
+        return text
     parts = [{"type": "text", "text": text}]
-    for img in (images or []):
-        img_part = resolve_image(img)
-        img_part.setdefault("type", "image_url")
-        parts.append(img_part)
+    for item in all_media:
+        parts.append(resolve_media(item))
     return parts
 
 
@@ -2072,7 +2131,7 @@ __all__ = [
     # Structured Outputs
     "StructuredOutput",
     # Multi-modal
-    "detect_mime_type", "resolve_image", "build_content_parts",
+    "detect_mime_type", "detect_media_kind", "resolve_image", "resolve_media", "build_content_parts",
     # Safety
     "TrifectaReport", "check_lethal_trifecta", "spotlight_untrusted",
     # Context Management
