@@ -1306,8 +1306,36 @@ def resolve_image(source: str) -> dict:
     return resolve_media(source)
 
 
-def build_content_parts(text: str, images: list = None, media: list = None) -> list[dict]:
-    """Build multi-modal content parts from text, images, and media."""
+def detect_model_capabilities(model: Optional[str] = None) -> dict:
+    """Detect multimodal capabilities based on model name."""
+    if not model:
+        return {"image": True, "audio": True, "video": True, "document": True}
+    m = model.lower()
+    if "gemini" in m:
+        return {"image": True, "audio": True, "video": True, "document": True}
+    if "gpt-4o" in m or "gpt-4.5" in m or "gpt-5" in m:
+        return {"image": True, "audio": "audio" in m, "video": True, "document": True}
+    if "claude" in m:
+        return {"image": True, "audio": False, "video": False, "document": True}
+    if any(v in m for v in ("llava", "vision", "qwen-vl", "minicpm", "moondream")):
+        return {"image": True, "audio": False, "video": "video" in m, "document": False}
+    return {"image": False, "audio": False, "video": False, "document": False}
+
+
+def convert_media_to_markdown(source: Any, custom_converter: Any = None) -> str:
+    """Convert media into Markdown text representation."""
+    if custom_converter:
+        try:
+            return str(custom_converter(source))
+        except Exception:
+            pass
+    url = source.get("url", str(source)) if isinstance(source, dict) else str(source)
+    kind = detect_media_kind(url)
+    return f"#### [{kind.capitalize()} Attachment: {url}]\n*(Transcribed / converted to Markdown for text model)*"
+
+
+def build_content_parts(text: str, images: list = None, media: list = None, model: str = None, custom_converter: Any = None) -> Union[str, list[dict]]:
+    """Build multi-modal content parts or transcode to Markdown."""
     all_media = []
     if images:
         all_media.extend(images)
@@ -1315,10 +1343,25 @@ def build_content_parts(text: str, images: list = None, media: list = None) -> l
         all_media.extend(media)
     if not all_media:
         return text
-    parts = [{"type": "text", "text": text}]
+
+    caps = detect_model_capabilities(model) if model else None
+    native_parts = []
+    converted_md = []
+
     for item in all_media:
-        parts.append(resolve_media(item))
-    return parts
+        kind = item.get("type", "image") if isinstance(item, dict) else detect_media_kind(str(item))
+        if caps and not caps.get(kind, True):
+            converted_md.append(convert_media_to_markdown(item, custom_converter))
+        else:
+            native_parts.append(resolve_media(item))
+
+    if converted_md:
+        text = f"{text}\n\n---\n### Attached Media (Markdown Extracted):\n" + "\n\n".join(converted_md)
+
+    if not native_parts:
+        return text
+
+    return [{"type": "text", "text": text}, *native_parts]
 
 
 # ---------------------------------------------------------------------------
@@ -2132,6 +2175,7 @@ __all__ = [
     "StructuredOutput",
     # Multi-modal
     "detect_mime_type", "detect_media_kind", "resolve_image", "resolve_media", "build_content_parts",
+    "convert_media_to_markdown", "detect_model_capabilities",
     # Safety
     "TrifectaReport", "check_lethal_trifecta", "spotlight_untrusted",
     # Context Management
