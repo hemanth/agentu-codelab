@@ -1228,6 +1228,44 @@ _AUDIO_EXTS = (".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac", ".opus")
 _VIDEO_EXTS = (".mp4", ".webm", ".mov", ".avi", ".mkv", ".flv", ".m4v")
 
 
+class InferResult:
+    """Mock InferResult for Pyodide."""
+    def __init__(self, text: str = "", structured: Any = None, turns: int = 1, history: list = None, tool_calls: list = None):
+        self.text = text
+        self.structured = structured
+        self.data = structured
+        self.turns = turns
+        self.history = history or []
+        self.tool_calls = tool_calls or []
+
+    def __getitem__(self, key: str):
+        if key in ("text", "text_response"):
+            return self.text
+        if key in ("structured", "data"):
+            return self.structured
+        if key == "turns":
+            return self.turns
+        if key == "history":
+            return self.history
+        if key == "tool_calls":
+            return self.tool_calls
+        raise KeyError(key)
+
+    def get(self, key: str, default: Any = None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __str__(self):
+        return self.text
+
+    def __repr__(self):
+        if self.structured is not None:
+            return f"InferResult(data={self.structured!r}, turns={self.turns})"
+        return f"InferResult(text={self.text!r}, turns={self.turns})"
+
+
 def detect_media_kind(source: str) -> str:
     """Classify media into 'image', 'audio', 'video', or 'document'."""
     s = source.lower()
@@ -2171,8 +2209,8 @@ __all__ = [
     "serve", "AgentServer",
     # Hooks
     "HookAction", "HookResult",
-    # Structured Outputs
-    "StructuredOutput",
+    # Structured Outputs & Typed Generics
+    "StructuredOutput", "InferResult",
     # Multi-modal
     "detect_mime_type", "detect_media_kind", "resolve_image", "resolve_media", "build_content_parts",
     "convert_media_to_markdown", "detect_model_capabilities",
