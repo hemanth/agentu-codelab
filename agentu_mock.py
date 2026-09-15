@@ -528,6 +528,14 @@ class Agent:
         result = await self._llm.complete([{"role": "user", "content": prompt}])
         return result
 
+    async def generate_image(self, prompt: str, output_path: str = None, **kwargs):
+        """Simulate Agentu's single-image generation API in the browser."""
+        image = GeneratedImage(data=b"mock generated image", revised_prompt=prompt)
+        if output_path:
+            image.save(output_path, overwrite=kwargs.get("overwrite", False))
+        self._observer.log("image_generation", {"prompt": prompt[:80], "output_path": output_path})
+        return image
+
     async def call(self, tool_name: str, params: dict = None) -> Any:
         params = params or {}
         if tool_name not in self._tools:
@@ -2184,6 +2192,22 @@ Agent.with_backend = _with_backend
 Agent.with_vectors = _with_vectors
 
 
+class GeneratedImage:
+    """Small browser-safe stand-in for Agentu's generated image result."""
+    def __init__(self, data: bytes = None, url: str = None, revised_prompt: str = None):
+        self.data = data
+        self.url = url
+        self.revised_prompt = revised_prompt
+
+    def save(self, path: str, overwrite: bool = False):
+        destination = Path(path)
+        if destination.exists() and not overwrite:
+            raise FileExistsError(f"Image already exists: {destination}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(self.data or b"")
+        return destination
+
+
 # ---------------------------------------------------------------------------
 # Convenience: make 'from agentu import ...' work in codelab
 # ---------------------------------------------------------------------------
@@ -2214,6 +2238,7 @@ __all__ = [
     # Multi-modal
     "detect_mime_type", "detect_media_kind", "resolve_image", "resolve_media", "build_content_parts",
     "convert_media_to_markdown", "detect_model_capabilities",
+    "GeneratedImage",
     # Safety
     "TrifectaReport", "check_lethal_trifecta", "spotlight_untrusted",
     # Context Management

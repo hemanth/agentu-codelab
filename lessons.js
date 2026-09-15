@@ -3304,5 +3304,46 @@ print(f"Total parts: {len(parts)}")
 for p in parts:
     print(f"  - {p.get('type')}")
 `,
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 39: Image Generation
+  // -----------------------------------------------------------------------
+  {
+    id: "image_generation",
+    title: "Image Generation",
+    description: `
+Generate and save a single image with Agentu's high-level \`generate_image()\` API. Provider-specific response arrays stay behind the abstraction, so the common path is one prompt, one image, and an optional output path.
+
+For local open-source models, point \`api_base\` at an OpenAI-compatible image server such as LocalAI and select a Flux or Stable Diffusion model.
+    `.trim(),
+    starterCode: `from pathlib import Path
+from agentu import Agent
+
+agent = Agent("image-maker")
+
+image = await agent.generate_image(
+    "A paper-cut fox beneath a crescent moon",
+    model="flux.1-dev-ggml",
+    output_path="renders/fox.png",
+)
+
+print(f"Saved: {Path('renders/fox.png').exists()}")
+print(f"Revised prompt: {image.revised_prompt}")
+`,
+    exercise: `**Exercise:** Generate a lighthouse image and save it to \`renders/lighthouse.png\`. Verify that the path exists.`,
+    hint: "Pass output_path='renders/lighthouse.png' directly to await agent.generate_image(...).",
+    solution: `from pathlib import Path
+from agentu import Agent
+
+agent = Agent("image-maker")
+image = await agent.generate_image(
+    "A cinematic lighthouse during a storm",
+    model="flux.1-dev-ggml",
+    output_path="renders/lighthouse.png",
+)
+
+print(Path("renders/lighthouse.png").exists())
+`,
   }
 ];
