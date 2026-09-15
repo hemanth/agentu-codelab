@@ -99,7 +99,10 @@ async function initPyodide() {
 
   loadingText.textContent = "Loading agentu module…";
 
-  const mockResp = await fetch("./agentu_mock.py");
+  const mockResp = await fetch("./agentu_mock.py", { cache: "no-store" });
+  if (!mockResp.ok) {
+    throw new Error(`Failed to load agentu module (${mockResp.status})`);
+  }
   const mockCode = await mockResp.text();
 
   pyodide.FS.writeFile("/home/pyodide/agentu.py", mockCode);
@@ -422,4 +425,3 @@ document.querySelectorAll(".pill[data-lesson]").forEach((pill) => {
     launchCodelab(idx);
   });
 });
-

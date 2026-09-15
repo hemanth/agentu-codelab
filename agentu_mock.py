@@ -16,7 +16,7 @@ import uuid
 import sqlite3
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, Protocol, runtime_checkable
+from typing import Any, Callable, Optional, Protocol, Union, runtime_checkable
 
 
 # ---------------------------------------------------------------------------
