@@ -1236,15 +1236,25 @@ _AUDIO_EXTS = (".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac", ".opus")
 _VIDEO_EXTS = (".mp4", ".webm", ".mov", ".avi", ".mkv", ".flv", ".m4v")
 
 
-class InferResult:
-    """Mock InferResult for Pyodide."""
-    def __init__(self, text: str = "", structured: Any = None, turns: int = 1, history: list = None, tool_calls: list = None):
+class InferResult(dict):
+    """Mock InferResult for Pyodide (subclasses dict for 100% compatibility)."""
+    def __init__(self, text: str = "", structured: Any = None, turns: int = 1, history: list = None, tool_calls: list = None, **extra: Any):
+        base = {
+            "text_response": text,
+            "result": extra.pop("result", text),
+            "structured": structured,
+            "turns": turns,
+            "history": history or [],
+            "tool_calls": tool_calls or [],
+            **extra,
+        }
+        super().__init__(base)
         self.text = text
         self.structured = structured
         self.data = structured
         self.turns = turns
-        self.history = history or []
-        self.tool_calls = tool_calls or []
+        self.history = base["history"]
+        self.tool_calls = base["tool_calls"]
 
     def __getitem__(self, key: str):
         if key in ("text", "text_response"):
@@ -1257,6 +1267,8 @@ class InferResult:
             return self.history
         if key == "tool_calls":
             return self.tool_calls
+        if super().__contains__(key):
+            return super().__getitem__(key)
         raise KeyError(key)
 
     def get(self, key: str, default: Any = None):
