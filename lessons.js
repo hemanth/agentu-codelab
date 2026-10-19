@@ -2748,151 +2748,7 @@ print(f"\\n✓ Full loop engineering pipeline complete")
   },
 
   // -----------------------------------------------------------------------
-  // Lesson 35: Capstone
-  // -----------------------------------------------------------------------
-  {
-    id: "capstone",
-    title: "Capstone: full agent system",
-    description: `
-Combine **everything** you've learned into a production-ready agent system.
-
-This capstone builds a DevOps agent that uses:
-- Tools with permissions and hooks
-- Memory and caching
-- Guardrails with self-correction
-- Structured outputs
-- Safety checks (lethal trifecta)
-- Sessions with checkpoints
-- Skills and MCP integration
-- Middleware and notifications
-- Observability
-- Declarative configuration
-
-This is the complete agentu feature set in action.
-    `.trim(),
-    starterCode: `from agentu import (
-    Agent, Tool, ToolPermission, HookAction, HookResult,
-    SessionManager, NoPII, check_lethal_trifecta,
-    spotlight_untrusted, estimate_tokens, evaluate
-)
-
-# === Tools with permissions ===
-def check_status(service: str) -> str:
-    """Check service health."""
-    return f"{service}: healthy (99.9% uptime)"
-
-def restart_service(service: str) -> str:
-    """Restart a service."""
-    return f"{service} restarted successfully"
-
-def read_logs(service: str) -> str:
-    """Read service logs (may contain untrusted data)."""
-    raw = f"[LOG] {service}: normal operation"
-    return spotlight_untrusted(raw)  # Mark as data, not instructions
-
-# === Safety check ===
-tools = [
-    Tool(check_status, permission=ToolPermission.READONLY),
-    Tool(restart_service, permission=ToolPermission.WRITE),
-    Tool(read_logs, permission=ToolPermission.READONLY, ingests_untrusted=True),
-]
-report = check_lethal_trifecta(tools)
-print(f"Safety check — trifecta: {report.has_trifecta}")
-
-# === Hook: audit all writes ===
-async def audit(tool_name, params, ctx):
-    if tool_name == "restart_service":
-        print(f"  [AUDIT] Restart requested for: {params.get('service', '?')}")
-    return HookResult(action=HookAction.ALLOW)
-
-# === Build agent ===
-agent = Agent("devops").with_tools(tools) \\
-    .with_hooks(pre_tool=audit) \\
-    .with_cache(preset="basic") \\
-    .with_guardrails(output_guardrails=[NoPII()], max_corrections=2) \\
-    .with_mock_responses([
-        "All services are healthy.",
-        "Restarted web-api successfully.",
-        "Log analysis complete. No anomalies.",
-    ])
-
-# === Memory ===
-agent.remember("Last incident: web-api crash on 2024-01-15", importance=0.9)
-agent.remember("Preferred restart sequence: cache → api → worker", importance=0.8)
-
-# === Session ===
-manager = SessionManager()
-session = manager.create_session(agent, metadata={"user": "ops-team"})
-
-r1 = await session.send("Check status of web-api")
-print(f"\\nTurn 1: {r1['result']}")
-
-r2 = await session.send("Restart web-api")
-print(f"Turn 2: {r2['result']}")
-
-# === Checkpoint ===
-session.checkpoint()
-print(f"\\n✓ Session checkpointed at turn {session.turn_count}")
-
-# === Evaluate ===
-test_cases = [
-    {"ask": "Check web-api", "expect": "healthy"},
-    {"ask": "Check database", "expect": "healthy"},
-]
-results = await evaluate(agent, test_cases)
-print(f"\\nEval: {results.passed}/{results.total} passed ({results.accuracy}%)")
-
-# === Metrics ===
-metrics = agent.observer.get_metrics()
-print(f"\\nMetrics: {metrics['tool_calls']} tool calls, {metrics['total_events']} events")
-
-# === Context estimation ===
-prompt = "Check all services and restart any that are down"
-tokens = estimate_tokens(prompt)
-print(f"Prompt tokens: ~{tokens}")
-
-print("\\n🎉 Full agent system operational!")
-`,
-    exercise: `**Exercise:** Extend this agent with a scheduled automation and a sub-agent reviewer. Add a \`record_rationale\` call to document why you chose the restart sequence.`,
-    hint: "Add `agent.with_schedule(every=60, prompt='Monitor services')` and `agent.with_subagents([...])` with a checker role.",
-    solution: `from agentu import Agent, Tool, ToolPermission, NoPII
-
-def check(svc: str) -> str:
-    return f"{svc}: healthy"
-def restart(svc: str) -> str:
-    return f"{svc} restarted"
-
-agent = Agent("ops", enable_rationale_recording=True) \\
-    .with_tools([
-        Tool(check, permission=ToolPermission.READONLY),
-        Tool(restart, permission=ToolPermission.WRITE),
-    ]) \\
-    .with_cache(preset="basic") \\
-    .with_guardrails(output_guardrails=[NoPII()])
-
-agent.with_schedule(every=60, prompt="Monitor all services")
-agent.with_subagents([
-    {"name": "monitor", "instructions": "Check service health", "role": "maker"},
-    {"name": "reviewer", "instructions": "Verify restart decisions", "role": "checker"},
-])
-
-agent.record_rationale(
-    action="Cache → API → Worker restart order",
-    reasoning="Cache must be warm before API serves, workers depend on API",
-    alternatives=["Parallel restart", "API first"]
-)
-
-print("Full production agent configured!")
-print(f"  Tools: {len(agent._tools)}")
-print(f"  Schedule: every 60 min")
-print(f"  Sub-agents: {len(agent._subagent_configs)}")
-decisions = agent.recall("rationale")
-print(f"  Decisions: {len(decisions)}")
-`,
-  },
-
-  // -----------------------------------------------------------------------
-  // Lesson 34: Always-On Memory
+  // Lesson 35: Always-On Memory
   // -----------------------------------------------------------------------
   {
     id: "always-on-memory",
@@ -3012,7 +2868,7 @@ print("\\n✓ Knowledge base agent configured!")
   },
 
   // -----------------------------------------------------------------------
-  // Lesson 35: Agents as Tools
+  // Lesson 36: Agents as Tools
   // -----------------------------------------------------------------------
   {
     id: "agents-as-tools",
@@ -3089,13 +2945,12 @@ def analyze(data: str) -> str:
 def write_report(content: str) -> str:
     return f"Report: {content[:40]}"
 
-attempt_count = 0
+state = {"attempt_count": 0}
 def validate(report: str) -> str:
     \"\"\"Validate a report. Returns 'valid' or 'invalid'.\"\"\"
-    global attempt_count
-    attempt_count += 1
+    state["attempt_count"] += 1
     # First attempt fails, second succeeds
-    if attempt_count < 2:
+    if state["attempt_count"] < 2:
         return "invalid: needs more depth"
     return "valid: report is comprehensive"
 
@@ -3132,7 +2987,7 @@ else:
   },
 
   // -----------------------------------------------------------------------
-  // Lesson 36: Agent Plugins (v1.0.0 Spec)
+  // Lesson 37: Agent Plugins (v1.0.0 Spec)
   // -----------------------------------------------------------------------
   {
     id: "agent-plugins",
@@ -3224,7 +3079,7 @@ print(f"Skills loaded: {[s.name for s in agent.skills]}")
   },
 
   // -----------------------------------------------------------------------
-  // Lesson 37: Durable Agents
+  // Lesson 38: Durable Agents
   // -----------------------------------------------------------------------
   {
     id: "durable_agents",
@@ -3251,8 +3106,9 @@ print(f"Durable mode: {agent._durable}")
 print("Agent is now crash-safe!")
 `,
   },
+
   // -----------------------------------------------------------------------
-  // Lesson 38: Multimodal Media Engine
+  // Lesson 39: Multimodal Media Engine
   // -----------------------------------------------------------------------
   {
     id: "multimodal_media",
@@ -3307,7 +3163,7 @@ for p in parts:
   },
 
   // -----------------------------------------------------------------------
-  // Lesson 39: Image Generation
+  // Lesson 40: Image Generation
   // -----------------------------------------------------------------------
   {
     id: "image_generation",
@@ -3345,5 +3201,151 @@ image = await agent.generate_image(
 
 print(Path("renders/lighthouse.png").exists())
 `,
-  }
+  },
+
+  // -----------------------------------------------------------------------
+  // Lesson 41: Capstone
+  // -----------------------------------------------------------------------
+  {
+    id: "capstone",
+    title: "Capstone: full agent system",
+    description: `
+Combine **everything** you've learned into a production-ready agent system.
+
+This capstone builds a DevOps agent that uses:
+- Tools with permissions and hooks
+- Memory and caching
+- Guardrails with self-correction
+- Structured outputs
+- Safety checks (lethal trifecta)
+- Sessions with checkpoints
+- Skills and MCP integration
+- Middleware and notifications
+- Observability
+- Declarative configuration
+
+This is the complete agentu feature set in action.
+    `.trim(),
+    starterCode: `from agentu import (
+    Agent, Tool, ToolPermission, HookAction, HookResult,
+    SessionManager, NoPII, check_lethal_trifecta,
+    spotlight_untrusted, estimate_tokens, evaluate
+)
+
+# === Tools with permissions ===
+def check_status(service: str) -> str:
+    """Check service health."""
+    return f"{service}: healthy (99.9% uptime)"
+
+def restart_service(service: str) -> str:
+    """Restart a service."""
+    return f"{service} restarted successfully"
+
+def read_logs(service: str) -> str:
+    """Read service logs (may contain untrusted data)."""
+    raw = f"[LOG] {service}: normal operation"
+    return spotlight_untrusted(raw)  # Mark as data, not instructions
+
+# === Safety check ===
+tools = [
+    Tool(check_status, permission=ToolPermission.READONLY),
+    Tool(restart_service, permission=ToolPermission.WRITE),
+    Tool(read_logs, permission=ToolPermission.READONLY, ingests_untrusted=True),
+]
+report = check_lethal_trifecta(tools)
+print(f"Safety check — trifecta: {report.has_trifecta}")
+
+# === Hook: audit all writes ===
+async def audit(tool_name, params, ctx):
+    if tool_name == "restart_service":
+        print(f"  [AUDIT] Restart requested for: {params.get('service', '?')}")
+    return HookResult(action=HookAction.ALLOW)
+
+# === Build agent ===
+agent = Agent("devops").with_tools(tools) \\
+    .with_hooks(pre_tool=audit) \\
+    .with_cache(preset="basic") \\
+    .with_guardrails(output_guardrails=[NoPII()], max_corrections=2) \\
+    .with_mock_responses([
+        "All services are healthy.",
+        "Restarted web-api successfully.",
+        "web-api is healthy. No anomalies.",
+        "database is healthy.",
+    ])
+
+# === Memory ===
+agent.remember("Last incident: web-api crash on 2024-01-15", importance=0.9)
+agent.remember("Preferred restart sequence: cache → api → worker", importance=0.8)
+
+# === Session ===
+manager = SessionManager()
+session = manager.create_session(agent, metadata={"user": "ops-team"})
+
+r1 = await session.send("Check status of web-api")
+print(f"\\nTurn 1: {r1['result']}")
+
+r2 = await session.send("Restart web-api")
+print(f"Turn 2: {r2['result']}")
+
+# === Checkpoint ===
+session.checkpoint()
+print(f"\\n✓ Session checkpointed at turn {session.turn_count}")
+
+# === Evaluate ===
+test_cases = [
+    {"ask": "Check web-api", "expect": "healthy"},
+    {"ask": "Check database", "expect": "healthy"},
+]
+results = await evaluate(agent, test_cases)
+print(f"\\nEval: {results.passed}/{results.total} passed ({results.accuracy}%)")
+
+# === Metrics ===
+metrics = agent.observer.get_metrics()
+print(f"\\nMetrics: {metrics['tool_calls']} tool calls, {metrics['total_events']} events")
+
+# === Context estimation ===
+prompt = "Check all services and restart any that are down"
+tokens = estimate_tokens(prompt)
+print(f"Prompt tokens: ~{tokens}")
+
+print("\\n🎉 Full agent system operational!")
+`,
+    exercise: `**Exercise:** Extend this agent with a scheduled automation and a sub-agent reviewer. Add a \`record_rationale\` call to document why you chose the restart sequence.`,
+    hint: "Add `agent.with_schedule(every=60, prompt='Monitor services')` and `agent.with_subagents([...])` with a checker role.",
+    solution: `from agentu import Agent, Tool, ToolPermission, NoPII
+
+def check(svc: str) -> str:
+    return f"{svc}: healthy"
+def restart(svc: str) -> str:
+    return f"{svc} restarted"
+
+agent = Agent("ops", enable_rationale_recording=True) \\
+    .with_tools([
+        Tool(check, permission=ToolPermission.READONLY),
+        Tool(restart, permission=ToolPermission.WRITE),
+    ]) \\
+    .with_cache(preset="basic") \\
+    .with_guardrails(output_guardrails=[NoPII()])
+
+agent.with_schedule(every=60, prompt="Monitor all services")
+agent.with_subagents([
+    {"name": "monitor", "instructions": "Check service health", "role": "maker"},
+    {"name": "reviewer", "instructions": "Verify restart decisions", "role": "checker"},
+])
+
+agent.record_rationale(
+    action="Cache → API → Worker restart order",
+    reasoning="Cache must be warm before API serves, workers depend on API",
+    alternatives=["Parallel restart", "API first"]
+)
+
+print("Full production agent configured!")
+print(f"  Tools: {len(agent._tools)}")
+print(f"  Schedule: every 60 min")
+print(f"  Sub-agents: {len(agent._subagent_configs)}")
+decisions = agent.recall("rationale")
+print(f"  Decisions: {len(decisions)}")
+`,
+  },
 ];
+

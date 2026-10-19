@@ -189,9 +189,10 @@ _sys.stdout = _capture
 async def _codelab_run():
 ${code.split("\n").map((l) => "    " + l).join("\n")}
 
-await _codelab_run()
-
-_sys.stdout = _sys.__stdout__
+try:
+    await _codelab_run()
+finally:
+    _sys.stdout = _sys.__stdout__
 _capture.getvalue()
 `;
 

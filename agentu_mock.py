@@ -14,6 +14,7 @@ import json
 import time
 import uuid
 import sqlite3
+from pathlib import Path
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Protocol, Union, runtime_checkable
@@ -33,6 +34,15 @@ class ToolPermission(Enum):
 # Tool wrapper
 # ---------------------------------------------------------------------------
 
+class ToolSchema(dict):
+    """Dict with attribute access for tool schema items (supports both t['name'] and t.name)."""
+    def __getattr__(self, key: str):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"'ToolSchema' object has no attribute '{key}'")
+
+
 @dataclass
 class Tool:
     func: Callable
@@ -49,6 +59,10 @@ class Tool:
         if not self.description:
             self.description = (self.func.__doc__ or "").strip()
 
+    @property
+    def function(self) -> Callable:
+        return self.func
+
     def get_schema(self) -> dict:
         sig = inspect.signature(self.func)
         params = {}
@@ -61,11 +75,12 @@ class Tool:
             elif p.annotation == bool:
                 ptype = "boolean"
             params[pname] = {"type": ptype}
-        return {
+        return ToolSchema({
             "name": self.name,
             "description": self.description,
             "parameters": params,
-        }
+        })
+
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +134,9 @@ class Memory:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 content TEXT NOT NULL,
                 importance REAL DEFAULT 0.5,
+                memory_type TEXT DEFAULT 'fact',
+                entities TEXT DEFAULT '[]',
+                topics TEXT DEFAULT '[]',
                 created_at REAL DEFAULT (strftime('%s','now'))
             )
         """)
@@ -128,26 +146,46 @@ class Memory:
                   memory_type: str = "fact", entities: list = None,
                   topics: list = None, source: str = None,
                   summary: str = None, consolidated: bool = False, **kwargs):
+        if entities is None and memory_type == "fact":
+            words = [w.strip(".,'\"():;!?") for w in content.split()]
+            entities = [w for w in words if len(w) > 1 and w[0].isupper() and not w.isupper()][:4]
+        if topics is None and memory_type == "fact":
+            words = [w.strip(".,'\"():;!?").lower() for w in content.split()]
+            stop = {"the", "and", "for", "with", "that", "this", "from", "was", "are", "is"}
+            topics = [w for w in words if len(w) > 3 and w not in stop][:3]
         self._db.execute(
-            "INSERT INTO memories (content, importance) VALUES (?, ?)",
-            (content, importance),
+            "INSERT INTO memories (content, importance, memory_type, entities, topics) VALUES (?, ?, ?, ?, ?)",
+            (content, importance, memory_type or "fact", json.dumps(entities or []), json.dumps(topics or [])),
         )
         self._db.commit()
 
     def recall(self, query: str = "", limit: int = 5,
                memory_type: str = None, include_short_term: bool = False,
                **kwargs) -> list[dict]:
+        clauses = []
+        params = []
         if query:
-            rows = self._db.execute(
-                "SELECT content, importance FROM memories WHERE content LIKE ? ORDER BY importance DESC LIMIT ?",
-                (f"%{query}%", limit),
-            ).fetchall()
-        else:
-            rows = self._db.execute(
-                "SELECT content, importance FROM memories ORDER BY importance DESC LIMIT ?",
-                (limit,),
-            ).fetchall()
-        return [{"content": r[0], "importance": r[1], "entities": [], "topics": []} for r in rows]
+            clauses.append("content LIKE ?")
+            params.append(f"%{query}%")
+        if memory_type:
+            clauses.append("memory_type = ?")
+            params.append(memory_type)
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        rows = self._db.execute(
+            f"SELECT content, importance, memory_type, entities, topics FROM memories {where_sql} ORDER BY importance DESC LIMIT ?",
+            tuple(params),
+        ).fetchall()
+        return [
+            {
+                "content": r[0],
+                "importance": r[1],
+                "memory_type": r[2],
+                "entities": json.loads(r[3] or "[]"),
+                "topics": json.loads(r[4] or "[]"),
+            }
+            for r in rows
+        ]
 
     def clear(self):
         self._db.execute("DELETE FROM memories")
@@ -225,6 +263,7 @@ class MockLLM:
     """Deterministic mock LLM for codelab exercises."""
 
     def __init__(self, responses=None):
+        self._custom_responses = responses is not None
         self._responses = responses or ["I found the answer for you."]
         self._index = 0
         self._correction_count = 0
@@ -232,15 +271,24 @@ class MockLLM:
     async def complete(self, messages, tools=None):
         response = self._responses[self._index % len(self._responses)]
         self._index += 1
-        # If tools are available and prompt mentions a tool name, simulate tool call
-        if tools:
+        # Only auto-trigger tool_call when custom mock responses were not explicitly set
+        if tools and not self._custom_responses:
             user_msg = messages[-1].get("content", "") if messages else ""
             for tool in tools:
                 if tool["name"].lower() in user_msg.lower():
+                    args = {}
+                    for pname, pspec in tool.get("parameters", {}).items():
+                        ptype = pspec.get("type", "string")
+                        if ptype == "string":
+                            args[pname] = user_msg
+                        elif ptype in ("integer", "number"):
+                            args[pname] = 1
+                        elif ptype == "boolean":
+                            args[pname] = True
                     return {
                         "type": "tool_call",
                         "tool": tool["name"],
-                        "arguments": {},
+                        "arguments": args,
                         "content": response,
                     }
         return {"type": "text", "content": response}
@@ -414,10 +462,12 @@ class Agent:
         self._llm = MockLLM(responses)
         return self
 
+    @property
+    def skills(self) -> list:
+        return getattr(self, "_skills", [])
+
     def with_agents(self, agents: list) -> "Agent":
         """Give this agent access to other agents as callable tools."""
-        import asyncio as _asyncio
-
         for agent in agents:
             agent_name = getattr(agent, "name", str(agent))
             tool_names = ", ".join(t.name for t in agent._tools.values())
@@ -427,6 +477,12 @@ class Agent:
             )
 
             async def _call_agent(task: str, _agent=agent) -> str:
+                if _agent._tools and not _agent._llm._custom_responses:
+                    first_tool = next(iter(_agent._tools.values()))
+                    sig = inspect.signature(first_tool.func)
+                    params = list(sig.parameters.keys())
+                    args = {params[0]: task} if params else {}
+                    return await _agent.call(first_tool.name, args)
                 return await _agent.infer(task)
 
             _call_agent.__name__ = f"call_{agent_name}"
@@ -450,6 +506,7 @@ class Agent:
                 f"[consolidated] {insight}",
                 importance=0.95,
                 memory_type="consolidation",
+                topics=related_topics or [],
             )
             return {"status": "consolidated", "insight": insight}
 
@@ -463,22 +520,38 @@ class Agent:
         self._inbox_poll_interval = poll_interval
         return self
 
-    def with_backend(self, backend=None, durable=False):
-        """Mock with_backend implementation."""
+    def with_backend(self, url_or_backend=None, durable: bool = False):
+        """Set the storage backend and/or durable mode for the agent."""
         if durable:
             self._durable = True
             self._durable_dir = "~/.agentu/agents"
             self._agent_lock = None
-        self._backend = backend
+        if url_or_backend is not None:
+            if isinstance(url_or_backend, str):
+                self._backend = InMemoryBackend()
+                self._observer.log("backend_configured", {"url": url_or_backend, "durable": durable})
+            else:
+                self._backend = url_or_backend
+                self._observer.log("backend_configured", {"type": type(url_or_backend).__name__, "durable": durable})
+        elif durable:
+            self._observer.log("backend_configured", {"durable": True})
         return self
 
     async def with_plugins(self, plugins) -> "Agent":
         """Load one or more Agent Plugins (v1.0.0 spec) in mock environment."""
         self._plugins = getattr(self, "_plugins", [])
         if isinstance(plugins, (list, tuple)):
-            self._plugins.extend(plugins)
-        else:
-            self._plugins.append(plugins)
+            for p in plugins:
+                await self.with_plugins(p)
+            return self
+        self._plugins.append(plugins)
+        loader = PluginLoader(plugins).load()
+        if loader.skills:
+            existing = list(getattr(self, "_skills", []))
+            existing.extend(loader.skills)
+            self.with_skills(existing)
+        if loader.mcp_config:
+            self.with_mcp([str(loader.mcp_config)])
         return self
 
     async def with_plugin(self, plugins) -> "Agent":
@@ -511,7 +584,7 @@ class Agent:
 
     def recall(self, query: str = "", limit: int = 5,
                memory_type: str = None, include_short_term: bool = False) -> list[dict]:
-        results = self._memory.recall(query, limit)
+        results = self._memory.recall(query, limit, memory_type=memory_type)
         self._observer.log("memory_recall", {"query": query, "results": len(results)})
         return results
 
@@ -532,7 +605,7 @@ class Agent:
         """Simulate Agentu's single-image generation API in the browser."""
         image = GeneratedImage(data=b"mock generated image", revised_prompt=prompt)
         if output_path:
-            image.save(output_path, overwrite=kwargs.get("overwrite", False))
+            image.save(output_path, overwrite=kwargs.get("overwrite", True))
         self._observer.log("image_generation", {"prompt": prompt[:80], "output_path": output_path})
         return image
 
@@ -617,6 +690,38 @@ class Agent:
                 self._observer.log("cache_hit", {"prompt": prompt[:40]})
                 return cached
 
+        # Code mode: chain available tools in a single Python execution
+        if self._codemode and self._tools:
+            code_lines = []
+            tools_called = []
+            last_result = prompt
+            for idx, (t_name, t_obj) in enumerate(self._tools.items(), 1):
+                sig = inspect.signature(t_obj.func)
+                pnames = list(sig.parameters.keys())
+                t_args = {}
+                if len(pnames) == 1:
+                    t_args[pnames[0]] = str(last_result)
+                elif len(pnames) >= 2:
+                    t_args[pnames[0]] = "output.txt" if "name" in pnames[0] or "file" in pnames[0] else str(last_result)
+                    for extra_p in pnames[1:]:
+                        t_args[extra_p] = str(last_result)
+                code_lines.append(f"r{idx} = tools.{t_name}({', '.join(f'{k}={v!r}' for k, v in t_args.items())})")
+                try:
+                    last_result = await self.call(t_name, t_args)
+                except Exception as e:
+                    last_result = f"Error: {e}"
+                tools_called.append(t_name)
+            code = "\n".join(code_lines)
+            result = {
+                "tool_used": tools_called[-1] if tools_called else "",
+                "code": code,
+                "parameters": {"code": code},
+                "result": last_result,
+                "tools_called": tools_called,
+            }
+            self._observer.log("inference_end", {"result_length": len(str(result)), "codemode": True})
+            return result
+
         # Build messages
         messages = []
         if self._rules:
@@ -635,24 +740,6 @@ class Agent:
         if response.get("type") == "tool_call":
             tool_name = response["tool"]
             args = response.get("arguments", {})
-
-            # Code mode: wrap tool call in code block
-            if self._codemode:
-                code = f"result = {tool_name}({', '.join(f'{k}={v!r}' for k, v in args.items())})"
-                try:
-                    tool_result = await self.call(tool_name, args)
-                except Exception as e:
-                    tool_result = f"Error: {e}"
-                result = {
-                    "tool_used": tool_name,
-                    "code": code,
-                    "parameters": {"code": code},
-                    "result": tool_result,
-                    "tools_called": [tool_name],
-                }
-                self._observer.log("inference_end", {"result_length": len(str(result)), "codemode": True})
-                return result
-
             try:
                 result = await self.call(tool_name, args)
             except Exception as e:
@@ -1339,24 +1426,24 @@ def resolve_media(source: Any) -> dict:
         url = source.get("url") or source.get("uri")
         if t == "video" and url:
             rest = {k: v for k, v in source.items() if k not in ("type", "url", "uri")}
-            return {"type": "video_url", "video_url": {"url": url, **rest}}
+            return {"type": "video_url", "url": url, "video_url": {"url": url, **rest}}
         if t == "image" and url:
             rest = {k: v for k, v in source.items() if k not in ("type", "url", "uri")}
-            return {"type": "image_url", "image_url": {"url": url, **rest}}
+            return {"type": "image_url", "url": url, "image_url": {"url": url, **rest}}
         if t == "audio" and url:
             rest = {k: v for k, v in source.items() if k not in ("type", "url", "uri")}
-            return {"type": "audio_url", "audio_url": {"url": url, **rest}}
+            return {"type": "audio_url", "url": url, "audio_url": {"url": url, **rest}}
         return source
 
     kind = detect_media_kind(source)
     mime = detect_mime_type(source)
     if kind == "video":
-        return {"type": "video_url", "video_url": {"url": source}}
+        return {"type": "video_url", "url": source, "video_url": {"url": source}}
     elif kind == "audio":
-        return {"type": "audio_url", "audio_url": {"url": source}}
+        return {"type": "audio_url", "url": source, "audio_url": {"url": source}}
     elif kind == "document":
-        return {"type": "document", "document": {"url": source, "mime_type": mime}}
-    return {"type": "image_url", "image_url": {"url": source}}
+        return {"type": "document", "url": source, "document": {"url": source, "mime_type": mime}}
+    return {"type": "image_url", "url": source, "image_url": {"url": source}}
 
 
 def resolve_image(source: str) -> dict:
@@ -1510,45 +1597,44 @@ def estimate_tokens(text: str) -> int:
 
 async def compact_context(history: list[dict], config: ContextConfig) -> list[dict]:
     """Compact conversation history to fit within token budget."""
-    budget = config.max_tokens - config.reserve_output
+    reserve = config.reserve_output if config.max_tokens > config.reserve_output * 2 else int(config.max_tokens * 0.2)
+    budget = max(100, config.max_tokens - reserve)
     total = sum(estimate_tokens(h.get("content", "")) for h in history)
 
     if total <= budget:
         return history
 
     if config.compaction == "truncate":
-        # Keep system messages and recent messages, truncate old results
+        # Keep system messages and recent messages (up to keep_recent * 2), truncate old results
         compacted = []
         system_msgs = [h for h in history if h.get("role") == "system"]
         other_msgs = [h for h in history if h.get("role") != "system"]
         compacted.extend(system_msgs)
 
-        # Keep last N messages that fit
+        max_msgs = config.keep_recent * 2 if config.keep_recent else len(other_msgs)
+        candidates = other_msgs[-max_msgs:]
         remaining = budget - sum(estimate_tokens(h.get("content", "")) for h in system_msgs)
         kept = []
-        for msg in reversed(other_msgs):
+        for msg in reversed(candidates):
             msg_tokens = estimate_tokens(msg.get("content", ""))
             if remaining >= msg_tokens:
                 kept.insert(0, msg)
                 remaining -= msg_tokens
             else:
-                # Truncate this message
-                truncated_content = msg.get("content", "")[:remaining * 4]
+                truncated_content = msg.get("content", "")[:max(20, remaining * 4)]
                 kept.insert(0, {**msg, "content": f"[truncated] {truncated_content}..."})
-                break
+                remaining = 0
 
         compacted.extend(kept)
         return compacted
 
     elif config.compaction == "summarize":
-        # Mock: keep first and last, summarize middle
         if len(history) <= 2:
             return history
         summary = {"role": "system", "content": f"[Summary of {len(history) - 2} previous messages]"}
         return [history[0], summary, history[-1]]
 
     elif config.compaction == "sliding":
-        # Keep only last N messages that fit
         kept = []
         remaining = budget
         for msg in reversed(history):
@@ -1843,7 +1929,7 @@ Agent.with_worktree = _with_worktree
 def _from_config(cls, config_path_or_dict) -> "Agent":
     """Construct an Agent from a config dict or YAML-like string."""
     if isinstance(config_path_or_dict, dict):
-        config = config_path_or_dict
+        config = dict(config_path_or_dict)
     elif isinstance(config_path_or_dict, str):
         # Simple YAML-like parser (key: value per line)
         config = {}
@@ -1869,11 +1955,13 @@ def _from_config(cls, config_path_or_dict) -> "Agent":
     name = config.pop("name", "agent")
     model = config.pop("model", "mock")
     agent = cls(name=name, model=model, **{k: v for k, v in config.items()
-                                           if k in ("codemode", "enable_rationale_recording")})
+                                           if k in ("codemode", "enable_rationale_recording", "system_prompt")})
 
     # Apply known config keys
     if "cache" in config:
-        agent.with_cache(preset=config["cache"])
+        cache_cfg = config["cache"]
+        preset = cache_cfg.get("preset", "basic") if isinstance(cache_cfg, dict) else cache_cfg
+        agent.with_cache(preset=preset)
     if "max_tokens" in config:
         agent.with_context(max_tokens=int(config["max_tokens"]))
     if "rules" in config:
@@ -2182,26 +2270,79 @@ class InMemoryBackend:
         return f"InMemoryBackend(keys={len(self._data)})"
 
 
-def _with_backend(self, url_or_backend):
-    """Set the storage backend for the agent."""
-    if isinstance(url_or_backend, str):
-        # Mock: parse URL and use in-memory backend
-        self._backend = InMemoryBackend()
-        self._observer.log("backend_configured", {"url": url_or_backend})
-    else:
-        self._backend = url_or_backend
-        self._observer.log("backend_configured", {"type": type(url_or_backend).__name__})
-    return self
-
-
 def _with_vectors(self, path: str):
     """Configure vector storage path."""
     self._vectors_path = path
     self._observer.log("vectors_configured", {"path": path})
     return self
 
-Agent.with_backend = _with_backend
 Agent.with_vectors = _with_vectors
+
+
+# ---------------------------------------------------------------------------
+# Agent Plugins (v1.0.0 Spec)
+# ---------------------------------------------------------------------------
+
+class PluginLoader:
+    """Loader for Agent Plugins (v1.0.0 spec)."""
+
+    def __init__(self, plugin_path: Union[str, Path]):
+        self.plugin_root = Path(plugin_path).resolve()
+        self.manifest: dict[str, Any] = {}
+        self.skills: list[Skill] = []
+        self.mcp_config: Optional[Path] = None
+
+    def is_contained(self, path: Path) -> bool:
+        try:
+            resolved = path.resolve()
+            return resolved == self.plugin_root or self.plugin_root in resolved.parents
+        except Exception:
+            return False
+
+    def load(self) -> "PluginLoader":
+        if not self.plugin_root.exists() or not self.plugin_root.is_dir():
+            raise FileNotFoundError(f"Plugin root directory does not exist: {self.plugin_root}")
+
+        manifest_file = self.plugin_root / "plugin.json"
+        if not manifest_file.exists() or not self.is_contained(manifest_file):
+            raise FileNotFoundError(f"Missing or out-of-bounds plugin.json at {manifest_file}")
+
+        try:
+            self.manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+        except Exception as e:
+            raise ValueError(f"Failed to parse plugin.json: {e}")
+
+        if not isinstance(self.manifest, dict) or not str(self.manifest.get("name", "")).strip():
+            raise ValueError("plugin.json missing required non-empty 'name' field")
+
+        skills_dir = self.plugin_root / "skills"
+        if skills_dir.exists() and skills_dir.is_dir() and self.is_contained(skills_dir):
+            for skill_subdir in sorted(skills_dir.iterdir()):
+                if skill_subdir.is_dir() and self.is_contained(skill_subdir):
+                    skill_file = skill_subdir / "SKILL.md"
+                    if skill_file.exists() and skill_file.is_file() and self.is_contained(skill_file):
+                        raw = skill_file.read_text(encoding="utf-8")
+                        s_name = skill_subdir.name
+                        s_desc = f"Skill from {self.manifest['name']}"
+                        s_body = raw
+                        if raw.startswith("---"):
+                            parts = raw.split("---", 2)
+                            if len(parts) >= 3:
+                                fm, s_body = parts[1], parts[2].strip()
+                                for line in fm.splitlines():
+                                    if ":" in line:
+                                        k, v = line.split(":", 1)
+                                        if k.strip() == "name" and v.strip():
+                                            s_name = v.strip()
+                                        elif k.strip() == "description" and v.strip():
+                                            s_desc = v.strip()
+                        self.skills.append(Skill(name=s_name, description=s_desc, instructions=s_body))
+
+        mcp_file = self.plugin_root / "mcp.json"
+        if mcp_file.exists() and mcp_file.is_file() and self.is_contained(mcp_file):
+            self.mcp_config = mcp_file
+
+        return self
 
 
 class GeneratedImage:
@@ -2211,7 +2352,7 @@ class GeneratedImage:
         self.url = url
         self.revised_prompt = revised_prompt
 
-    def save(self, path: str, overwrite: bool = False):
+    def save(self, path: str, overwrite: bool = True):
         destination = Path(path)
         if destination.exists() and not overwrite:
             raise FileExistsError(f"Image already exists: {destination}")
@@ -2226,7 +2367,7 @@ class GeneratedImage:
 
 __all__ = [
     # Core
-    "Agent", "Tool", "ToolPermission",
+    "Agent", "Tool", "ToolPermission", "ToolSchema",
     # Guardrails
     "NoPII", "NoHallucination",
     # Evaluation
@@ -2235,8 +2376,8 @@ __all__ = [
     "observe", "configure_observe", "Observer",
     # Memory & Cache
     "Memory", "Cache",
-    # Skills
-    "Skill",
+    # Skills & Plugins
+    "Skill", "PluginLoader",
     # Sessions
     "SessionManager", "Session",
     # MCP
@@ -2274,3 +2415,4 @@ __all__ = [
     # MockLLM
     "MockLLM",
 ]
+
