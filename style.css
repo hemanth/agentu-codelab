@@ -797,6 +797,19 @@ body {
 
 /* ---------- Responsive ---------- */
 
+@media (max-width: 900px) {
+  .landing {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .landing-inner {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 2rem 1.25rem 3rem;
+    min-height: auto;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar-toggle { display: flex; }
 
@@ -812,11 +825,15 @@ body {
   }
   .sidebar.open { transform: translateX(0); }
 
-  .content { padding: 20px 16px; }
+  .content { padding: 20px 16px; width: 100%; min-width: 0; }
+  .lesson-title { font-size: 1.35rem; }
+  #editor-container { height: 260px; }
+  .btn-row { flex-wrap: wrap; }
+  .btn { padding: 8px 14px; font-size: 0.8125rem; }
 
   /* Topbar: compact for mobile */
   .topbar {
-    padding: 10px 12px 10px 52px;
+    padding: 10px 12px 10px 58px;
     gap: 8px;
   }
   .topbar h1 { font-size: 0.95rem; }
@@ -829,27 +846,36 @@ body {
   .landing-inner {
     grid-template-columns: 1fr;
     gap: 1.5rem;
-    padding: 2rem 1rem;
+    padding: 1.75rem 1rem 2.5rem;
   }
   .landing-hero { align-items: center; }
   .landing-header { text-align: center; }
   .landing-subtitle { max-width: 100%; }
-  .install-banner { align-self: center; }
-  .landing-cta-row { align-items: center; }
-  .landing-features { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .install-banner { align-self: center; max-width: 100%; overflow-x: auto; }
+  .landing-cta-row { align-items: center; width: 100%; }
+  .landing-features { grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
   .landing-orb { opacity: 0.1; }
 
   .landing-badge { margin-bottom: 8px; font-size: 0.65rem; }
-  .landing-title { font-size: 1.5rem; margin-bottom: 4px; }
-  .landing-subtitle { font-size: 0.8rem; }
+  .landing-title { font-size: 1.65rem; margin-bottom: 6px; }
+  .landing-subtitle { font-size: 0.85rem; }
 
-  .pill { font-size: 0.65rem; padding: 3px 8px; }
+  .pill { font-size: 0.68rem; padding: 4px 9px; }
 
-  .landing-cta { padding: 10px 28px; font-size: 0.9rem; }
-  .landing-meta { font-size: 0.7rem; }
+  .landing-cta { padding: 12px 28px; font-size: 0.95rem; width: 100%; max-width: 280px; justify-content: center; }
+  .landing-meta { font-size: 0.72rem; }
+
+  .congrats-title { font-size: 1.85rem; }
+  .congrats-stats { gap: 24px; flex-wrap: wrap; }
+  .congrats-actions { flex-direction: column; width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .landing-features { grid-template-columns: 1fr; }
+  .btn-solution { margin-left: 0; width: 100%; text-align: center; }
 }
 
 @media (max-width: 380px) {
-  .landing-title { font-size: 1.3rem; }
-  .pill { font-size: 0.62rem; padding: 3px 8px; }
+  .landing-title { font-size: 1.35rem; }
+  .pill { font-size: 0.64rem; padding: 3px 8px; }
 }
